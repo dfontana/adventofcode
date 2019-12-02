@@ -3,7 +3,9 @@ package util
 import (
 	"bufio"
 	"io"
+	"log"
 	"os"
+	"regexp"
 	"strconv"
 )
 
@@ -14,7 +16,7 @@ func OpenFile(fname string) (io.Reader, error) {
 
 // GetLines reads in the given file, returning and array of strings - one
 // per line in the file.
-func GetLines(file string) {
+func GetLines(fileName string) []string {
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
@@ -52,6 +54,15 @@ func Split(text string, delimeter string) []string {
 	}
 	result[len(indexes)] = text[laststart:len(text)]
 	return result
+}
+
+// ToInt converts a string to integer
+func ToInt(item string) int {
+	val, err := strconv.Atoi(item)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return val
 }
 
 // ReadInts reads whitespace-separated ints from r. If there's an error, it
