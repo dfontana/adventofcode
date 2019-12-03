@@ -7,21 +7,28 @@ import (
 	"github.com/dfontana/adventofcode2019/util"
 )
 
+const OP_CODE_ADD = 1
+const OP_CODE_MULT = 2
+const OP_CODE_ABORT = 99
+
 func main() {
 	data := parseInput("./input.txt")
+
+	res, _ := run(getMemory(data))
+	fmt.Println("Part 1:", res)
+
 	target := 19690720
-	res := findTarget(data, target)
-	fmt.Println("Result:", res)
+	res = findTarget(data, target)
+	fmt.Println("Part 2:", res)
 }
 
 func findTarget(data []int, target int) int {
 	for noun := 0; noun <= 99; noun++ {
 		for verb := 0; verb <= 99; verb++ {
 			memory := getMemory(data)
-			memory[1] = noun
-			memory[2] = verb
-			runProgram(memory)
-			if memory[0] == target {
+			memory[1], memory[2] = noun, verb
+			res, _ := run(memory)
+			if res == target {
 				return 100*noun + verb
 			}
 		}
@@ -29,51 +36,51 @@ func findTarget(data []int, target int) int {
 	return -1
 }
 
-func runProgram(memory []int) {
-	tokens := len(memory)
-	for i := 0; i < tokens; i += 4 {
-		inst := memory[i]
-		x := memory[safeAddress(i+1, memory, tokens)]
-		y := memory[safeAddress(i+2, memory, tokens)]
-		ref := safeAddress(i+3, memory, tokens)
-		res, done := operate(inst, x, y)
-		if done {
-			return
-		}
-		memory[ref] = res
-	}
-}
-
 func getMemory(data []int) []int {
-	var clean []int
-	for _, i := range data {
-		clean = append(clean, i)
-	}
-	return clean
+	memory := make([]int, len(data))
+	copy(memory, data)
+	return memory
 }
 
-func safeAddress(idx int, data []int, length int) int {
-	if idx >= length {
-		return 0
-	}
-	ref := data[idx]
-	if ref >= length {
-		return 0
-	}
-	return ref
-}
-
-func operate(op int, x int, y int) (int, bool) {
+func getParamCt(op int) int {
 	switch op {
-	case 1:
-		return x + y, false
-	case 2:
-		return x * y, false
-	case 99:
-		return 0, true
-	default:
-		log.Fatal("Unknown op code hit")
-		return 0, true
+	case OP_CODE_ADD:
+	case OP_CODE_MULT:
+		return 3
+	}
+	return 0
+}
+
+func run(memory []int) (int, bool) {
+	ptr := 0
+	maxAddr := len(memory)
+	for {
+		if ptr >= maxAddr {
+			log.Fatal("About to segFault. Aborting...")
+			return 0, true
+		}
+
+		op := memory[ptr]
+
+		if getParamCt(op) >= maxAddr-ptr {
+			log.Fatal("About to segFault. Aborting...")
+			return 0, true
+		}
+
+		switch op {
+		case OP_CODE_ADD:
+			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
+			memory[ref] = memory[x] + memory[y]
+			ptr += 4
+		case OP_CODE_MULT:
+			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
+			memory[ref] = memory[x] * memory[y]
+			ptr += 4
+		case OP_CODE_ABORT:
+			return memory[0], true
+		default:
+			return 0, true
+		}
 	}
 }
 
