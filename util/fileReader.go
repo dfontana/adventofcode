@@ -72,14 +72,8 @@ func ReadInts(r io.Reader) ([]int, error) {
 	scanner.Split(bufio.ScanWords)
 	var result []int
 	for scanner.Scan() {
-		x, err := strconv.Atoi(scanner.Text())
-		if err != nil {
-			return result, err
-
-		}
+		x := ToInt(scanner.Text())
 		result = append(result, x)
-
 	}
 	return result, scanner.Err()
-
 }
