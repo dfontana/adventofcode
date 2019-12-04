@@ -19,31 +19,66 @@ func main() {
 	wire2 := makeSegments(data2)
 
 	var intersects []*Point
-	for _, wire1s := range wire1 {
-		for _, wire2s := range wire2 {
+	var steps []float64
+	var dists []float64
+
+	origin := Point{X: 0, Y: 0}
+
+	for idx1s, wire1s := range wire1 {
+		for idx2s, wire2s := range wire2 {
 			p := intersect(wire1s[0], wire1s[1], wire2s[0], wire2s[1])
 			if p != nil {
+				// P1 / P2 Distances needed, could be more efficient but meh
+				mhDist := manhatten(origin, *p)
+				stepDist := stepsToPoint(wire1, idx1s, *p) + stepsToPoint(wire2, idx2s, *p)
+
+				dists = append(dists, mhDist)
+				steps = append(steps, stepDist)
 				intersects = append(intersects, p)
 			}
 		}
 	}
 
-	origin := Point{X: 0, Y: 0}
-	min := 1000000.0
-	var minP *Point
-	for _, inter := range intersects {
-		dist := manhatten(origin, *inter)
-		if min > dist && dist != 0 {
-			minP = inter
-			min = dist
+	minST, minMH := 1000000.0, 1000000.0
+	var minPMH, minPST *Point
+	for i, inter := range intersects {
+
+		// Part 1: Shortest is Manhatten based
+		dist := dists[i]
+		if minMH > dist && dist != 0 {
+			minPMH = inter
+			minMH = dist
+		}
+
+		// Part 2: Shortest is steps based
+		dist = steps[i]
+		if minST > dist && dist != 0 {
+			minPST = inter
+			minST = dist
 		}
 	}
-	fmt.Println(minP, min)
+	fmt.Println("Part 1:", minPMH, minMH)
+	fmt.Println("Part 2:", minPST, minST)
 }
 
 // manhatten distance of two points
 func manhatten(a Point, b Point) float64 {
 	return math.Abs(b.X-a.X) + math.Abs(b.Y-a.Y)
+}
+
+func stepsToPoint(wireSegments [][]Point, idx int, intersect Point) float64 {
+	steps := 0.0
+	// Get dist up to this point
+	i := 0
+	for ; i < idx; i++ {
+		segment := wireSegments[i]
+		steps += manhatten(segment[0], segment[1])
+	}
+
+	// Add the last bit to the intersect
+	segment := wireSegments[i]
+	steps += manhatten(segment[0], intersect)
+	return steps
 }
 
 // determine intersection point of segments AB, CD
