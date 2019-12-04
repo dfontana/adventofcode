@@ -98,7 +98,8 @@ func intersect(a Point, b Point, c Point, d Point) *Point {
 	s := (-By*(a.X-c.X) + Ax*(a.Y-c.Y)) / deter
 	t := (Cx*(a.Y-c.Y) - Dy*(a.X-c.X)) / deter
 
-	if s < 0 || s > 1 || t < 0 || t > 1 {
+	if !isBetween(0.0, s, 1.0) || !isBetween(0.0, t, 1.0) {
+		// no intersection to be had
 		return nil
 	}
 
