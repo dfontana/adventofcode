@@ -1,56 +1,66 @@
 package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
+
+type runChecker func(int) bool
 
 func main() {
-	passes := 0
-	for i := 130254; i <= 678275; i++ {
-		if isPassword(i) {
-			passes++
-		}
-	}
-	fmt.Println("Passes:", passes, isPassword(111111), isPassword(223450), isPassword(123789), isPassword(112233), isPassword(123444), isPassword(111122))
+	part1 := checkRange(130254, 678275, func(r int) bool { return r >= 2 })
+	part2 := checkRange(130254, 678275, func(r int) bool { return r == 2 })
+	fmt.Println("Passes:", part1, part2)
 }
 
-func isPassword(val int) bool {
-	valStr := strconv.FormatInt(int64(val), 10)
+func checkRange(min int, max int, runCheck runChecker) int {
+	passwords := 0
+	for i := min; i <= max; i++ {
+		if isPassword(i, runCheck) {
+			passwords++
+		}
+	}
+	return passwords
+}
+
+func breakDigits(val int) []int {
 	var digits []int
-	for _, char := range valStr {
-		digits = append(digits, int(char))
+	for val > 0 {
+		digits = append(digits, val%10)
+		val /= 10
 	}
 
+	var result []int
+	for i := len(digits) - 1; i >= 0; i-- {
+		result = append(result, digits[i])
+	}
+	return result
+}
+
+func isPassword(val int, runCheck runChecker) bool {
+	digits := breakDigits(val)
+
 	prior := -1
-	twoSame := false
-	noIncrease := true
-	tooLong := false
+	run := 1
 	hasSafeRun := false
-	longestRun := 1
+
+	end := len(digits) - 1
 	for i, digit := range digits {
+		if digit < prior {
+			return false
+		}
+
 		matched := digit == prior
 		if matched {
-			twoSame = true
-			longestRun++
-			if longestRun == 3 {
-				tooLong = true
-			}
+			run++
 		}
 
-		if !matched || i == len(digits)-1 {
-			if longestRun == 2 {
+		if !matched || i == end {
+			if runCheck(run) {
 				hasSafeRun = true
 			}
-			longestRun = 1
+			run = 1
 		}
 
-		if digit < prior {
-			noIncrease = false
-			break
-		}
 		prior = digit
 	}
 
-	return twoSame && noIncrease && (!tooLong || hasSafeRun)
+	return hasSafeRun
 }
