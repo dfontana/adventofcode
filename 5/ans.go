@@ -61,7 +61,7 @@ func getParamCt(op int) int {
 	return 0
 }
 
-func getOpParams(raw int) (int, []int) {
+func getOpModes(raw int) (int, []int) {
 	modes := []int{0, 0, 0}
 	op := 0
 	for i := 0; raw > 0; i++ {
@@ -91,6 +91,15 @@ func applyModes(memory []int, modes []int, params ...int) []int {
 	return items
 }
 
+func getParams(memory []int, ptr int, op int) []int {
+	ops := getParamCt(op)
+	var params []int
+	for i := 1; i <= ops; i++ {
+		params = append(params, memory[ptr+i])
+	}
+	return params
+}
+
 func run(memory []int) (int, bool) {
 	ptr := 0
 	maxAddr := len(memory)
@@ -100,71 +109,53 @@ func run(memory []int) (int, bool) {
 			return 0, true
 		}
 
-		op, modes := getOpParams(memory[ptr])
-		if getParamCt(op) >= maxAddr-ptr {
+		op, modes := getOpModes(memory[ptr])
+		paramCt := getParamCt(op)
+		if paramCt >= maxAddr-ptr {
 			log.Fatal("About to segFault. Aborting...")
 			return 0, true
 		}
+		rawParams := getParams(memory, ptr, op)
+		modeParams := applyModes(memory, modes, rawParams...)
 
 		switch op {
 		case opCodeAdd:
-			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
-			params := applyModes(memory, modes, x, y)
-			memory[ref] = params[0] + params[1]
-			ptr += 4
+			memory[rawParams[2]] = modeParams[0] + modeParams[1]
 		case opCodeMult:
-			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
-			params := applyModes(memory, modes, x, y)
-			memory[ref] = params[0] * params[1]
-			ptr += 4
+			memory[rawParams[2]] = modeParams[0] * modeParams[1]
 		case opCodeInput:
-			ref := memory[ptr+1]
-			memory[ref] = getInput()
-			ptr += 2
+			memory[rawParams[0]] = getInput()
 		case opCodeOuput:
-			ref := memory[ptr+1]
-			params := applyModes(memory, modes, ref)
-			fmt.Println(params[0])
-			ptr += 2
+			fmt.Println(modeParams[0])
 		case opCodeLessThan:
-			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
-			params := applyModes(memory, modes, x, y)
-			if params[0] < params[1] {
-				memory[ref] = 1
+			if modeParams[0] < modeParams[1] {
+				memory[rawParams[2]] = 1
 			} else {
-				memory[ref] = 0
+				memory[rawParams[2]] = 0
 			}
-			ptr += 4
 		case opCodeEquals:
-			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
-			params := applyModes(memory, modes, x, y)
-			if params[0] == params[1] {
-				memory[ref] = 1
+			if modeParams[0] == modeParams[1] {
+				memory[rawParams[2]] = 1
 			} else {
-				memory[ref] = 0
+				memory[rawParams[2]] = 0
 			}
-			ptr += 4
 		case opCodeJumpIfFalse:
-			x, y := memory[ptr+1], memory[ptr+2]
-			params := applyModes(memory, modes, x, y)
-			if params[0] == 0 {
-				ptr = params[1]
+			if modeParams[0] == 0 {
+				ptr = modeParams[1]
 				continue
 			}
-			ptr += 3
 		case opCodeJumpIfTrue:
-			x, y := memory[ptr+1], memory[ptr+2]
-			params := applyModes(memory, modes, x, y)
-			if params[0] != 0 {
-				ptr = params[1]
+			if modeParams[0] != 0 {
+				ptr = modeParams[1]
 				continue
 			}
-			ptr += 3
 		case opCodeAbort:
 			return memory[0], true
 		default:
 			return 0, true
 		}
+
+		ptr += paramCt + 1
 	}
 }
 
