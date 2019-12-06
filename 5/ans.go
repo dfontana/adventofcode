@@ -14,10 +14,13 @@ const opCodeMult = 2
 const opCodeAbort = 99
 const opCodeInput = 3
 const opCodeOuput = 4
+const opCodeJumpIfTrue = 5
+const opCodeJumpIfFalse = 6
+const opCodeLessThan = 7
+const opCodeEquals = 8
 
 func main() {
 	data := parseInput("./input.txt")
-
 	res, _ := run(getMemory(data))
 	fmt.Println("Part 1:", res)
 }
@@ -38,10 +41,20 @@ func getMemory(data []int) []int {
 
 func getParamCt(op int) int {
 	switch op {
+	case opCodeJumpIfFalse:
+		fallthrough
+	case opCodeJumpIfTrue:
+		return 2
+	case opCodeLessThan:
+		fallthrough
+	case opCodeEquals:
+		fallthrough
 	case opCodeAdd:
+		fallthrough
 	case opCodeMult:
 		return 3
 	case opCodeInput:
+		fallthrough
 	case opCodeOuput:
 		return 1
 	}
@@ -113,6 +126,40 @@ func run(memory []int) (int, bool) {
 			params := applyModes(memory, modes, ref)
 			fmt.Println(params[0])
 			ptr += 2
+		case opCodeLessThan:
+			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
+			params := applyModes(memory, modes, x, y)
+			if params[0] < params[1] {
+				memory[ref] = 1
+			} else {
+				memory[ref] = 0
+			}
+			ptr += 4
+		case opCodeEquals:
+			x, y, ref := memory[ptr+1], memory[ptr+2], memory[ptr+3]
+			params := applyModes(memory, modes, x, y)
+			if params[0] == params[1] {
+				memory[ref] = 1
+			} else {
+				memory[ref] = 0
+			}
+			ptr += 4
+		case opCodeJumpIfFalse:
+			x, y := memory[ptr+1], memory[ptr+2]
+			params := applyModes(memory, modes, x, y)
+			if params[0] == 0 {
+				ptr = params[1]
+				continue
+			}
+			ptr += 3
+		case opCodeJumpIfTrue:
+			x, y := memory[ptr+1], memory[ptr+2]
+			params := applyModes(memory, modes, x, y)
+			if params[0] != 0 {
+				ptr = params[1]
+				continue
+			}
+			ptr += 3
 		case opCodeAbort:
 			return memory[0], true
 		default:
