@@ -13,6 +13,38 @@ func main() {
 	minLayer := findFewestZeroes(layers)
 
 	fmt.Println("Part 1:", countDigit(layers[minLayer], 1)*countDigit(layers[minLayer], 2))
+	fmt.Print("Part 2:")
+	printLayer(decode(layers), 25)
+}
+
+func printLayer(layer []int, width int) {
+	for i, pixel := range layer {
+		if i%width == 0 {
+			fmt.Println("")
+		}
+		switch pixel {
+		case 0:
+			fmt.Print("-")
+		case 1:
+			fmt.Print("#")
+		case 2:
+			fmt.Print(" ")
+		}
+	}
+}
+
+func decode(layers Layers) []int {
+	output := make([]int, len(layers[0]))
+	for i, pixel := range layers[0] {
+		chosenPixel := pixel
+		layer := 0
+		for chosenPixel == 2 {
+			chosenPixel = layers[layer][i]
+			layer++
+		}
+		output[i] = chosenPixel
+	}
+	return output
 }
 
 func countDigit(layer []int, digit int) int {
