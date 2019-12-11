@@ -16,13 +16,62 @@ func (c coord) equals(other coord) bool {
 	return other.X == c.X && other.Y == c.Y
 }
 
-func main() {
-	data := parseInput("./input.txt")
-	best, count := findMostVisible(data)
-	fmt.Println("P1:", best, "Sees", count, "out of", len(data))
+func (c *coord) add(x, y int) {
+	 c.X = c.X + x
+	 c.Y = c.Y + y
 }
 
-// 307 too high. 292 too low. Hermph.
+func main() {
+	asteroids, fieldWidth, fieldHeight := parseInput("./input.txt")
+	best, count := findMostVisible(asteroids)
+	fmt.Println("P1:", best, "Sees", count, "out of", len(asteroids))
+
+	nth := 200
+	lastToDie := findNthAnnihilated(asteroids, best, nth, fieldWidth, fieldHeight)
+	fmt.Println("P2:", nth, "th asteroid to vaporize is", lastToDie, "aka", lastToDie.X*100+lastToDie.Y)
+}
+
+func findNthAnnihilated(asteroids []coord, origin coord, nth, width, height int) coord {
+	vaporCount := 1
+	dest := coord{X: origin.X, Y: 0}
+	for {
+		// Find the asteroid to vaporize, if any
+		shortestDist := 1000000000.0
+		var idxOfAsteroidToBoom int
+
+		for idx, asteroid := range asteroids {
+			if asteroid.equals(origin) {
+				continue
+			}
+			if (inLineOfSight(origin, asteroid, dest)) {
+				dist := distSquared(origin, asteroid)
+				if (dist < shortestDist) {
+					shortestDist = dist
+					idxOfAsteroidToBoom = idx
+				}
+			}
+		}
+
+		// Boom the asteroid
+		if vaporCount == nth {
+			return asteroids[idxOfAsteroidToBoom]
+		}
+		asteroids = append(asteroids[:idxOfAsteroidToBoom], asteroids[idxOfAsteroidToBoom+1:]...)
+		vaporCount++
+
+		// Rotate the dest pointer 1
+		if dest.X + 1 < width && dest.Y == 0 {
+			dest.add(1, 0)
+		} else if dest.Y + 1 < height && dest.X == width-1 {
+			dest.add(0, 1)
+		} else if dest.X - 1 > -1 && dest.Y == height-1{
+			dest.add(-1, 0)
+		} else {
+			dest.add(0, -1)
+		}
+	}
+}
+
 func findMostVisible(asteroids []coord) (coord, int) {
 	maxCt := 0
 	var bestCoord coord
@@ -75,15 +124,21 @@ func inLineOfSight(a, c, b coord) bool {
 	return true
 }
 
-func parseInput(filename string) []coord {
+func distSquared(a, b coord) float64 {
+	return math.Pow(float64(b.X-a.X), 2) + math.Pow(float64(b.Y-a.Y), 2)
+}
+
+func parseInput(filename string) ([]coord, int, int) {
 	lines := util.GetLines(filename)
+	var width int
 	var coords []coord
 	for y, line := range lines {
+		width = len(line)
 		for x, space := range line {
 			if space == '#' {
 				coords = append(coords, coord{X: x, Y: y})
 			}
 		}
 	}
-	return coords
+	return coords, width, len(lines)
 }
