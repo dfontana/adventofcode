@@ -65,6 +65,15 @@ func ToInt(item string) int {
 	return val
 }
 
+// ToInt64 converts a string to integer64
+func ToInt64(item string) int64 {
+	val, err := strconv.ParseInt(item, 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return val
+}
+
 // ReadInts reads whitespace-separated ints from r. If there's an error, it
 // returns the ints successfully read so far as well as the error value.
 func ReadInts(r io.Reader) ([]int, error) {
