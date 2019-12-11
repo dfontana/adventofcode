@@ -25,9 +25,19 @@ func main() {
 	done := make(chan bool)
 
 	go run(getMemory(data), input, output, done)
-
 	input <- 1
 
+	fmt.Println("P1")
+	printOut(output, done)
+
+	go run(getMemory(data), input, output, done)
+	input <- 2
+
+	fmt.Println("P2")
+	printOut(output, done)
+}
+
+func printOut(output <-chan int64, done <-chan bool) {
 	stop := false
 	for !stop {
 		select {
@@ -38,8 +48,8 @@ func main() {
 		case <-done:
 			stop = true
 		}
-
 	}
+	fmt.Println("")
 }
 
 func getMemory(data []int64) []int64 {
