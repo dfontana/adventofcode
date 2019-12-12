@@ -17,8 +17,8 @@ func (c coord) equals(other coord) bool {
 }
 
 func (c *coord) add(x, y int) {
-	 c.X = c.X + x
-	 c.Y = c.Y + y
+	c.X = c.X + x
+	c.Y = c.Y + y
 }
 
 func main() {
@@ -33,42 +33,39 @@ func main() {
 
 func findNthAnnihilated(asteroids []coord, origin coord, nth, width, height int) coord {
 	vaporCount := 1
-	dest := coord{X: origin.X, Y: 0}
+	pX, pY := float64(origin.X), 0.0
+	delta := 0.0001
 	for {
-		// Find the asteroid to vaporize, if any
-		shortestDist := 1000000000.0
+		// Find the asteroid to vaporize
 		var idxOfAsteroidToBoom int
+		smallestAngle := 1000.0
 
 		for idx, asteroid := range asteroids {
 			if asteroid.equals(origin) {
 				continue
 			}
-			if (inLineOfSight(origin, asteroid, dest)) {
-				dist := distSquared(origin, asteroid)
-				if (dist < shortestDist) {
-					shortestDist = dist
+			if !blocked(asteroids, origin, asteroid) {
+				angle := getAngle(origin, pX, pY, asteroid)
+				if angle >= 0 && angle < smallestAngle {
+					smallestAngle = angle
 					idxOfAsteroidToBoom = idx
 				}
 			}
 		}
 
 		// Boom the asteroid
+		boom := asteroids[idxOfAsteroidToBoom]
+		pX = float64(boom.X)
+		pY = float64(boom.Y)
 		if vaporCount == nth {
-			return asteroids[idxOfAsteroidToBoom]
+			return boom
 		}
 		asteroids = append(asteroids[:idxOfAsteroidToBoom], asteroids[idxOfAsteroidToBoom+1:]...)
 		vaporCount++
 
-		// Rotate the dest pointer 1
-		if dest.X + 1 < width && dest.Y == 0 {
-			dest.add(1, 0)
-		} else if dest.Y + 1 < height && dest.X == width-1 {
-			dest.add(0, 1)
-		} else if dest.X - 1 > -1 && dest.Y == height-1{
-			dest.add(-1, 0)
-		} else {
-			dest.add(0, -1)
-		}
+		// Rotate the target pointer slightly, so we dont vaporize in a line
+		pX = float64(origin.X) + (pX-float64(origin.X))*math.Cos(delta) - (pY-float64(origin.Y))*math.Sin(delta)
+		pY = float64(origin.Y) + (pX-float64(origin.X))*math.Sin(delta) + (pY-float64(origin.Y))*math.Cos(delta)
 	}
 }
 
@@ -124,8 +121,10 @@ func inLineOfSight(a, c, b coord) bool {
 	return true
 }
 
-func distSquared(a, b coord) float64 {
-	return math.Pow(float64(b.X-a.X), 2) + math.Pow(float64(b.Y-a.Y), 2)
+func getAngle(a coord, pX float64, pY float64, b coord) float64 {
+	aTanVertical := math.Atan2(pY-float64(a.Y), pX-float64(a.X))
+	aTanToB := math.Atan2(float64(b.Y-a.Y), float64(b.X-a.X))
+	return aTanToB - aTanVertical
 }
 
 func parseInput(filename string) ([]coord, int, int) {
