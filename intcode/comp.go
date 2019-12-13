@@ -17,28 +17,12 @@ const opCodeEquals = 8
 const opCodeRelativeBase = 9
 const opCodeAbort = 99
 
-func main() {
-	data := ReadProgram("./input.txt")
-
-	input, output, done := MakeComms() 
-
-	go Run(data, input, output, done)
-	input <- 1
-
-	fmt.Println("P1")
-	PrintOut(output, done)
-
-	go Run(data, input, output, done)
-	input <- 2
-
-	fmt.Println("P2")
-	PrintOut(output, done)
-}
-
+// MakeComms channels for the intcode computer
 func MakeComms() (chan int64, chan int64, chan bool) {
 	return make(chan int64), make(chan int64), make(chan bool, 1)
 }
 
+// PrintOut coming from the computer
 func PrintOut(output <-chan int64, done <-chan bool) {
 	stop := false
 	for !stop {
@@ -54,55 +38,14 @@ func PrintOut(output <-chan int64, done <-chan bool) {
 	fmt.Println("")
 }
 
+// GetMemory for safe cloning
 func GetMemory(data []int64) []int64 {
 	memory := make([]int64, len(data))
 	copy(memory, data)
 	return memory
 }
 
-func getParamCt(op int64) int64 {
-	ct := 0
-	switch op {
-	case opCodeJumpIfFalse:
-		fallthrough
-	case opCodeJumpIfTrue:
-		ct = 2
-	case opCodeLessThan:
-		fallthrough
-	case opCodeEquals:
-		fallthrough
-	case opCodeAdd:
-		fallthrough
-	case opCodeMult:
-		ct = 3
-	case opCodeRelativeBase:
-		fallthrough
-	case opCodeInput:
-		fallthrough
-	case opCodeOuput:
-		ct = 1
-	}
-	return int64(ct)
-}
-
-func getOpModes(raw int64) (int64, []int64) {
-	modes := []int64{0, 0, 0}
-	op := int64(0)
-	for i := 0; raw > 0; i++ {
-		val := raw % 10
-		switch i {
-		case 0:
-			op += val
-		case 1:
-			op += 10 * val
-		default:
-			modes[i-2] = val
-		}
-		raw /= 10
-	}
-	return op, modes
-}
-
+// Run the intcode computer
 func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool) int64 {
 	memory := GetMemory(data)
 	var ptr, relativeBase int64
@@ -125,18 +68,18 @@ func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool
 			case 1:
 				return &param
 			case 2:
-				return getPtr(relativeBase+param)
+				return getPtr(relativeBase + param)
 			default:
 				panic("Unknown mode")
 			}
-		}	
+		}
 
 		switch op {
 		case opCodeAdd:
 			x, y, ref := getParam(mode[0], 1), getParam(mode[1], 2), getParam(mode[2], 3)
 			*ref = *x + *y
 		case opCodeMult:
-		  	x, y, ref := getParam(mode[0], 1), getParam(mode[1], 2), getParam(mode[2], 3)
+			x, y, ref := getParam(mode[0], 1), getParam(mode[1], 2), getParam(mode[2], 3)
 			*ref = *x * *y
 		case opCodeInput:
 			ref := getParam(mode[0], 1)
@@ -184,6 +127,7 @@ func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool
 	}
 }
 
+// ReadProgram from disk
 func ReadProgram(filename string) []int64 {
 	items := util.GetLines(filename)
 	tokens := util.Split(items[0], ",")
@@ -192,4 +136,47 @@ func ReadProgram(filename string) []int64 {
 		result = append(result, util.ToInt64(token))
 	}
 	return result
+}
+
+func getParamCt(op int64) int64 {
+	ct := 0
+	switch op {
+	case opCodeJumpIfFalse:
+		fallthrough
+	case opCodeJumpIfTrue:
+		ct = 2
+	case opCodeLessThan:
+		fallthrough
+	case opCodeEquals:
+		fallthrough
+	case opCodeAdd:
+		fallthrough
+	case opCodeMult:
+		ct = 3
+	case opCodeRelativeBase:
+		fallthrough
+	case opCodeInput:
+		fallthrough
+	case opCodeOuput:
+		ct = 1
+	}
+	return int64(ct)
+}
+
+func getOpModes(raw int64) (int64, []int64) {
+	modes := []int64{0, 0, 0}
+	op := int64(0)
+	for i := 0; raw > 0; i++ {
+		val := raw % 10
+		switch i {
+		case 0:
+			op += val
+		case 1:
+			op += 10 * val
+		default:
+			modes[i-2] = val
+		}
+		raw /= 10
+	}
+	return op, modes
 }
