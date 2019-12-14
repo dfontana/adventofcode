@@ -6,8 +6,8 @@ type config struct {
 	Done    chan bool
 	Request chan bool
 
-	SendDoneSignal    bool
-	SendRequestSignal bool
+	sendDoneSignal    bool
+	sendRequestSignal bool
 }
 
 func (c config) SetInput(in chan int64) config {
@@ -26,12 +26,12 @@ func (c config) SetDone(done chan bool) config {
 }
 
 func (c config) SendDone() config {
-	c.SendDoneSignal = true
+	c.sendDoneSignal = true
 	return c
 }
 
 func (c config) SendRequest() config {
-	c.SendRequestSignal = true
+	c.sendRequestSignal = true
 	return c
 }
 
@@ -42,7 +42,7 @@ func Config() config {
 		Output:            make(chan int64),
 		Done:              make(chan bool, 1),
 		Request:           make(chan bool),
-		SendDoneSignal:    false,
-		SendRequestSignal: false,
+		sendDoneSignal:    false,
+		sendRequestSignal: false,
 	}
 }

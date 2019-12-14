@@ -70,7 +70,7 @@ func Run(data []int64, conf config) int64 {
 			*ref = *x * *y
 		case opCodeInput:
 			ref := getParam(mode[0], 1)
-			if conf.SendRequestSignal {
+			if conf.sendRequestSignal {
 				conf.Request <- true
 			}
 			*ref = <-conf.Input
@@ -107,7 +107,7 @@ func Run(data []int64, conf config) int64 {
 			relativeBase += *x
 		case opCodeAbort:
 			close(conf.Output)
-			if conf.SendDoneSignal {
+			if conf.sendDoneSignal {
 				conf.Done <- true
 			}
 			return memory[0]

@@ -46,7 +46,6 @@ func (c cardinal) cartesianDiff() int {
 }
 
 func (c cardinal) rotate(dir turn) cardinal {
-
 	if dir == left {
 		return toLeft[c]
 	}
@@ -94,29 +93,107 @@ func asTurn(code int) turn {
 
 func main() {
 	data := intcode.ReadProgram("./input.txt")
-	in, out := intcode.MakeComms()
 
-	// TODO getInput chan for the comp to request input, we'll then send it through input.
-	// TODO perhaps group these chans into a pointer to a struct that intcode returns + intval for memory[0]
-	go intcode.Run(data, in, out)
-
+	// Part 1 - Count tiles it paints
+	conf := intcode.Config().SendRequest().SendDone()
+	go intcode.Run(data, conf)
 	tiles := map[string]*tile{"0_0": &tile{false, 0, 0, black}}
-	bot := robot{0, 0, 0}
+	runBot(
+		tiles,
+		conf.Done,
+		conf.Request,
+		conf.Output,
+		conf.Input,
+	)
 
+	ct := 0
+	for _, v := range tiles {
+		if v.wasPainted {
+			ct++
+		}
+	}
+	fmt.Println("Part 1", ct)
+
+	// Part 2 - Print what it spells when starting on white
+	conf = intcode.Config().SendRequest().SendDone()
+	go intcode.Run(data, conf)
+	tiles = map[string]*tile{"0_0": &tile{false, 0, 0, white}}
+	runBot(
+		tiles,
+		conf.Done,
+		conf.Request,
+		conf.Output,
+		conf.Input,
+	)
+
+	fmt.Println("Part 2 (upside down)")
+	printTiles(tiles)
+}
+
+func printTiles(tiles map[string]*tile) {
+	// We need to normalize everyone against a new origin.
+	// So find the most negative x and positive y
+	minX, minY := 0, 0
+	maxX, maxY := 0, 0
+	for _, tile := range tiles {
+		if tile.x < minX {
+			minX = tile.x
+		}
+		if tile.x > maxX {
+			maxX = tile.x
+		}
+		if tile.y > maxY {
+			maxY = tile.y
+		}
+		if tile.y < minY {
+			minY = tile.y
+		}
+	}
+
+	// Init the hull with correct size
+	width := maxX - minX
+	height := maxY - minY
+	var hull [][]paint
+	for r := 0; r <= height; r++ {
+		row := make([]paint, width+1)
+		for c := 0; c <= width; c++ {
+			row[c] = black
+		}
+		hull = append(hull, row)
+	}
+
+	// Write the tiles onto the board with adjusted origin
+	for _, tile := range tiles {
+		hull[tile.y-minY][tile.x+minX] = tile.color
+	}
+
+	// And print the reshaped hull
+	for _, row := range hull {
+		for _, col := range row {
+			char := " "
+			if col == white {
+				char = ":"
+			}
+			fmt.Print(char)
+		}
+		fmt.Println()
+	}
+}
+
+func runBot(tiles map[string]*tile, done, request <-chan bool, output <-chan int64, input chan<- int64) {
+	bot := robot{0, 0, 0}
 	i := 0
 	for stop := false; !stop; {
 		select {
-		case val, ok := <-out:
-			if !ok {
-				stop = true
-				break
-			}
-
+		case <-done:
+			stop = true
+		case val := <-output:
 			switch i % 2 {
 			case 0:
 				// Color instruction
 				key := fmt.Sprintf("%d_%d", bot.x, bot.y)
 				tiles[key].color = asPaint(int(val))
+				tiles[key].wasPainted = true
 			case 1:
 				// Move instruction
 				bot.direction = bot.direction.rotate(asTurn(int(val)))
@@ -125,15 +202,20 @@ func main() {
 				} else {
 					bot.y += bot.direction.cartesianDiff()
 				}
+				key := fmt.Sprintf("%d_%d", bot.x, bot.y)
+				if _, ok := tiles[key]; !ok {
+					tiles[key] = &tile{false, bot.x, bot.y, black}
+				}
 			}
 
 			i++
-		case <-getInput:
+		case <-request:
 			key := fmt.Sprintf("%d_%d", bot.x, bot.y)
 			val, ok := tiles[key]
-			if ok {
-				in <- int64(val.color)
+			if !ok {
+				panic("You didn't init the tile the bot is on")
 			}
+			input <- int64(val.color)
 		}
 	}
 }
