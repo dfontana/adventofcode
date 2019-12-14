@@ -1,0 +1,25 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/dfontana/adventofcode2019/intcode"
+)
+
+const empty = 0
+const wall = 1
+const block = 2
+const hPaddle = 3
+const ball = 4
+
+type tile struct {
+	x int
+	y int
+	id int
+}
+
+func main() {
+	data := intcode.ReadProgram("./input.txt")
+	input, output, done := intcode.MakeComms()
+
+}
