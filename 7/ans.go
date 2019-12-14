@@ -59,11 +59,17 @@ func runAmp(data []int64, phases []int64) int64 {
 
 	done := make(chan bool)
 
-	go intcode.Run(data, feedback, a, done)
-	go intcode.Run(data, a, b, done)
-	go intcode.Run(data, b, c, done)
-	go intcode.Run(data, c, d, done)
-	go intcode.Run(data, d, feedback, done)
+	fConf := intcode.Config().SendDone().SetInput(feedback).SetOutput(a).SetDone(done)
+	aConf := intcode.Config().SendDone().SetInput(a).SetOutput(b).SetDone(done)
+	bConf := intcode.Config().SendDone().SetInput(b).SetOutput(c).SetDone(done)
+	cConf := intcode.Config().SendDone().SetInput(c).SetOutput(d).SetDone(done)
+	dConf := intcode.Config().SendDone().SetInput(d).SetOutput(feedback).SetDone(done)
+
+	go intcode.Run(data, fConf)
+	go intcode.Run(data, aConf)
+	go intcode.Run(data, bConf)
+	go intcode.Run(data, cConf)
+	go intcode.Run(data, dConf)
 
 	feedback <- phases[0]
 	a <- phases[1]

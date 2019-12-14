@@ -46,11 +46,11 @@ func playGame(quarters int) <-chan tile {
 	if quarters != 0 {
 		data[0] = int64(quarters)
 	}
-	input, output, done := intcode.MakeComms()
 
-	go intcode.Run(data, input, output, done)
-	tilesA := listenForTiles(output)
-	tilesB := listenForInput(tilesA, input)
+	conf := intcode.Config()
+	go intcode.Run(data, conf)
+	tilesA := listenForTiles(conf.Output)
+	tilesB := listenForInput(tilesA, conf.Input)
 
 	return tilesB
 }

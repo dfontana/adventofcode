@@ -17,11 +17,6 @@ const opCodeEquals = 8
 const opCodeRelativeBase = 9
 const opCodeAbort = 99
 
-// MakeComms channels for the intcode computer
-func MakeComms() (chan int64, chan int64, chan bool) {
-	return make(chan int64), make(chan int64), make(chan bool, 1)
-}
-
 // PrintOut coming from the computer
 func PrintOut(output <-chan int64) {
 	for val := range output {
@@ -38,7 +33,7 @@ func GetMemory(data []int64) []int64 {
 }
 
 // Run the intcode computer
-func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool) int64 {
+func Run(data []int64, conf config) int64 {
 	memory := GetMemory(data)
 	var ptr, relativeBase int64
 
@@ -75,9 +70,12 @@ func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool
 			*ref = *x * *y
 		case opCodeInput:
 			ref := getParam(mode[0], 1)
-			*ref = <-input
+			if conf.SendRequestSignal {
+				conf.Request <- true
+			}
+			*ref = <-conf.Input
 		case opCodeOuput:
-			output <- *(getParam(mode[0], 1))
+			conf.Output <- *(getParam(mode[0], 1))
 		case opCodeLessThan:
 			x, y, ref := getParam(mode[0], 1), getParam(mode[1], 2), getParam(mode[2], 3)
 			if *x < *y {
@@ -108,8 +106,10 @@ func Run(data []int64, input <-chan int64, output chan<- int64, done chan<- bool
 			x := getParam(mode[0], 1)
 			relativeBase += *x
 		case opCodeAbort:
-			close(output)
-			done <- true
+			close(conf.Output)
+			if conf.SendDoneSignal {
+				conf.Done <- true
+			}
 			return memory[0]
 		default:
 			panic("Unknown Op Code")
