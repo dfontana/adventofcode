@@ -47,10 +47,11 @@ func main() {
 	go listenForTiles(output, done, tiles)
 	data[0] = 2
 	go intcode.Run(data, input, output, done)
-	go printBoard(forwardTiles, width, height)
 	go listenForInput(tiles, forwardTiles, done, input)
+	finalScore := printBoard(forwardTiles, width, height)
 
 	<-done
+	fmt.Println("Part 2:", finalScore)
 }
 
 func listenForInput(tiles <-chan tile, forwardTiles chan<- tile, done <-chan bool, input chan<- int64) {
@@ -59,6 +60,7 @@ func listenForInput(tiles <-chan tile, forwardTiles chan<- tile, done <-chan boo
 		select {
 		case <-done:
 			stop = true
+			close(forwardTiles)
 		case val, ok := <-tiles:
 			timer.Stop()
 			if ok {
@@ -99,7 +101,7 @@ func getInput() int {
 	}
 }
 
-func printBoard(tiles <-chan tile, width, height int) {
+func printBoard(tiles <-chan tile, width, height int) int {
 	// init the board
 	var board [][]int
 	for row := 0; row <= height; row++ {
@@ -121,33 +123,38 @@ func printBoard(tiles <-chan tile, width, height int) {
 			board[t.y][t.x] = t.id
 		}
 
+		if *mode == "headless" {
+			fmt.Print("\033[0G")
+			fmt.Print(currentScore)
+			continue
+		}
+
 		// clear screen
 		fmt.Printf("\033[0;0H")
 
-		if *mode != "headless" {
-			// draw
-			for _, row := range board {
-				for _, col := range row {
-					tChar := " "
-					switch col {
-					case wall:
-						tChar = "|"
-					case block:
-						tChar = "B"
-					case hPaddle:
-						tChar = "_"
-					case ball:
-						tChar = "o"
-					}
-					fmt.Print(tChar)
+		// draw
+		for _, row := range board {
+			for _, col := range row {
+				tChar := " "
+				switch col {
+				case wall:
+					tChar = "|"
+				case block:
+					tChar = "B"
+				case hPaddle:
+					tChar = "_"
+				case ball:
+					tChar = "o"
 				}
-				fmt.Println()
+				fmt.Print(tChar)
 			}
+			fmt.Println()
 		}
 
 		// We'll put the score at the bottom
-		fmt.Println("Score:", currentScore)
+		fmt.Print("Score:", currentScore)
 	}
+	return currentScore
 }
 
 func getInitialBoardState(tiles <-chan tile) (int, int, int) {
