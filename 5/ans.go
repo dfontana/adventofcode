@@ -8,15 +8,15 @@ import (
 
 func main() {
 	data := intcode.ReadProgram("./input.txt")
-	input, output := intcode.MakeComms()
-	go intcode.Run(data, input, output)
-	input <- 1
+	config := intcode.Config()
+	go intcode.Run(data, config)
+	config.Input <- 1
 	fmt.Print("Part 1 (first non-zero): ")
-	intcode.PrintOut(output)
+	intcode.PrintOut(config.Output)
 
-	input, output = intcode.MakeComms()
-	go intcode.Run(data, input, output)
-	input <- 5
+	config = intcode.Config()
+	go intcode.Run(data, config)
+	config.Input <- 5
 	fmt.Print("Part 2 (first non-zero): ")
-	intcode.PrintOut(output)
+	intcode.PrintOut(config.Output)
 }

@@ -9,8 +9,7 @@ import (
 func main() {
 	data := intcode.ReadProgram("./input.txt")
 
-	input, output := intcode.MakeComms()
-	res := intcode.Run(data, input, output)
+	res := intcode.Run(data, intcode.Config())
 	fmt.Println("Part 1:", res)
 
 	target := int64(19690720)
@@ -21,10 +20,9 @@ func main() {
 func findTarget(data []int64, target int64) int {
 	for noun := 0; noun <= 99; noun++ {
 		for verb := 0; verb <= 99; verb++ {
-			input, output := intcode.MakeComms()
 			memory := intcode.GetMemory(data)
 			memory[1], memory[2] = int64(noun), int64(verb)
-			res := intcode.Run(memory, input, output)
+			res := intcode.Run(memory, intcode.Config())
 			if res == target {
 				return 100*noun + verb
 			}
