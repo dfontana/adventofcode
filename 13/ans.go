@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/dfontana/adventofcode2019/intcode"
 )
@@ -16,7 +15,6 @@ const (
 	block   = 2
 	hPaddle = 3
 	ball    = 4
-	timeout = 3 * time.Millisecond // for input
 )
 
 type tile struct {
@@ -47,36 +45,22 @@ func playGame(quarters int) <-chan tile {
 		data[0] = int64(quarters)
 	}
 
-	conf := intcode.Config()
+	conf := intcode.Config().SendRequest()
 	go intcode.Run(data, conf)
-	tilesA := listenForTiles(conf.Output)
-	tilesB := listenForInput(tilesA, conf.Input)
-
-	return tilesB
+	listenForInput(conf.Request, conf.Input)
+	return listenForTiles(conf.Output)
 }
 
-func listenForInput(tiles <-chan tile, input chan<- int64) <-chan tile {
-	out := make(chan tile)
+func listenForInput(request <-chan bool, input chan<- int64) {
 	go func() {
-		timer := time.NewTimer(timeout)
-		for stop := false; !stop; {
+		for {
 			select {
-			case val, ok := <-tiles:
-				timer.Stop()
-				if ok {
-					out <- val
-					timer.Reset(timeout)
-				} else {
-					stop = true
-				}
-			case <-timer.C:
+			case <-request:
 				input <- int64(getInput())
 			default:
 			}
 		}
-		close(out)
 	}()
-	return out
 }
 
 func listenForTiles(progOut <-chan int64) <-chan tile {
