@@ -16,7 +16,7 @@ const (
 	block   = 2
 	hPaddle = 3
 	ball    = 4
-	timeout = 2 * time.Millisecond // for input
+	timeout = 3 * time.Millisecond // for input
 )
 
 type tile struct {
@@ -32,46 +32,76 @@ var mode = flag.String("mode", "player", "[bot, player, headless] How to play th
 func main() {
 	flag.Parse()
 
-	data := intcode.ReadProgram("./input.txt")
-	input, output, done := intcode.MakeComms()
-	go intcode.Run(data, input, output, done)
-
-	tiles := make(chan tile)
-	go listenForTiles(output, done, tiles)
-
+	tiles := playGame(0)
 	count, width, height := getInitialBoardState(tiles)
 	fmt.Println("Part 1:", count, "on board", width, "x", height)
 
-	tiles = make(chan tile)
-	forwardTiles := make(chan tile)
-	go listenForTiles(output, done, tiles)
-	data[0] = 2
-	go intcode.Run(data, input, output, done)
-	go listenForInput(tiles, forwardTiles, done, input)
-	finalScore := printBoard(forwardTiles, width, height)
-
-	<-done
+	tiles = playGame(2)
+	finalScore := printBoard(tiles, width, height)
 	fmt.Println("Part 2:", finalScore)
 }
 
-func listenForInput(tiles <-chan tile, forwardTiles chan<- tile, done <-chan bool, input chan<- int64) {
-	timer := time.NewTimer(timeout)
-	for stop := false; !stop; {
-		select {
-		case <-done:
-			stop = true
-			close(forwardTiles)
-		case val, ok := <-tiles:
-			timer.Stop()
-			if ok {
-				forwardTiles <- val
-				timer.Reset(timeout)
-			}
-		case <-timer.C:
-			input <- int64(getInput())
-		default:
-		}
+func playGame(quarters int) <-chan tile {
+	data := intcode.ReadProgram("./input.txt")
+	if quarters != 0 {
+		data[0] = int64(quarters)
 	}
+	input, output := intcode.MakeComms()
+
+	go intcode.Run(data, input, output)
+	tilesA := listenForTiles(output)
+	tilesB := listenForInput(tilesA, input)
+
+	return tilesB
+}
+
+func listenForInput(tiles <-chan tile, input chan<- int64) <-chan tile {
+	out := make(chan tile)
+	go func() {
+		timer := time.NewTimer(timeout)
+		for stop := false; !stop; {
+			select {
+			case val, ok := <-tiles:
+				timer.Stop()
+				if ok {
+					out <- val
+					timer.Reset(timeout)
+				} else {
+					stop = true
+				}
+			case <-timer.C:
+				input <- int64(getInput())
+			default:
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func listenForTiles(progOut <-chan int64) <-chan tile {
+	out := make(chan tile)
+	go func() {
+		instr := []int{0, 0, 0}
+		i := 0
+		for val := range progOut {
+			instr[i%3] = int(val)
+			i++
+			if i%3 == 0 {
+				// Flush the instr
+				if instr[2] == hPaddle {
+					paddleTileX = instr[0]
+				}
+				if instr[2] == ball {
+					ballTileX = instr[0]
+				}
+				out <- tile{instr[0], instr[1], instr[2]}
+				i = 0
+			}
+		}
+		close(out)
+	}()
+	return out
 }
 
 func getInput() int {
@@ -171,33 +201,4 @@ func getInitialBoardState(tiles <-chan tile) (int, int, int) {
 		}
 	}
 	return ct, maxX, maxY
-}
-
-func listenForTiles(progOut <-chan int64, done <-chan bool, out chan<- tile) {
-	instr := []int{0, 0, 0}
-	i := 0
-	stop := false
-	for !stop {
-		select {
-		case val, ok := <-progOut:
-			if ok {
-				instr[i%3] = int(val)
-			}
-		case <-done:
-			stop = true
-			close(out)
-		}
-		i++
-		if i%3 == 0 {
-			// Flush the instr
-			if instr[2] == hPaddle {
-				paddleTileX = instr[0]
-			}
-			if instr[2] == ball {
-				ballTileX = instr[0]
-			}
-			out <- tile{instr[0], instr[1], instr[2]}
-			i = 0
-		}
-	}
 }
