@@ -9,17 +9,19 @@ import (
 func main() {
 	data := intcode.ReadProgram("./input.txt")
 
-	input, output := intcode.MakeComms()
-	go intcode.Run(data, input, output)
+	input, output, done := intcode.MakeComms()
+	go intcode.Run(data, input, output, done)
 	input <- 1
 
 	fmt.Println("P1")
 	intcode.PrintOut(output)
+	<-done
 
-	input, output = intcode.MakeComms()
-	go intcode.Run(data, input, output)
+	input, output, done = intcode.MakeComms()
+	go intcode.Run(data, input, output, done)
 	input <- 2
 
 	fmt.Println("P2")
 	intcode.PrintOut(output)
+	<-done
 }

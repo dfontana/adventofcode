@@ -8,15 +8,17 @@ import (
 
 func main() {
 	data := intcode.ReadProgram("./input.txt")
-	input, output := intcode.MakeComms()
-	go intcode.Run(data, input, output)
+	input, output, done := intcode.MakeComms()
+	go intcode.Run(data, input, output, done)
 	input <- 1
 	fmt.Print("Part 1 (first non-zero): ")
 	intcode.PrintOut(output)
+	<-done
 
-	input, output = intcode.MakeComms()
-	go intcode.Run(data, input, output)
+	input, output, done = intcode.MakeComms()
+	go intcode.Run(data, input, output, done)
 	input <- 5
 	fmt.Print("Part 2 (first non-zero): ")
 	intcode.PrintOut(output)
+	<-done
 }
