@@ -20,7 +20,29 @@ type formula struct {
 
 func main() {
 	formulas := parseInput("./input.txt")
-	fmt.Println("Part 1: 1 Fuel costs", synthesize("FUEL", 1, formulas)["ORE"], "ORE")
+	orePerFuel := synthesize("FUEL", 1, formulas)["ORE"]
+	fmt.Println("Part 1: 1 Fuel costs", orePerFuel, "ORE")
+
+	availableOre := 1_000_000_000_000
+	testAmount, finalAmount := 0, 0
+	bestGuess := availableOre / orePerFuel
+	for {
+		oreNeeded := synthesize("FUEL", testAmount, formulas)["ORE"]
+		if oreNeeded > availableOre {
+			testAmount -= bestGuess
+		} else if oreNeeded <= availableOre {
+			finalAmount = testAmount
+			testAmount += bestGuess
+		}
+
+		if bestGuess > 1 {
+			bestGuess /= 2
+		} else {
+			// Search has converged
+			break
+		}
+	}
+	fmt.Println("Part 2: We can make at most", finalAmount, "fuel")
 }
 
 func synthesize(name string, amount int, formulas map[string]formula) map[string]int {
