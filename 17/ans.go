@@ -42,83 +42,13 @@ func main() {
 			}
 			isLeft, isRight := col == 0, col == totalCols-1
 
-			// Check corners
-			if isTop && isRight {
-				if space[row][col-1] == '#' && space[row+1][col] == '#' {
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-			if isTop && isLeft {
-				if space[row][col+1] == '#' && space[row+1][col] == '#' {
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-			if isBot && isRight {
-				if space[row-1][col] == '#' && space[row][col-1] == '#' {
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-			if isBot && isLeft {
-				if space[row-1][col] == '#' && space[row][col+1] == '#' {
-					// Intersect
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
+			if isTop || isBot || isLeft || isRight {
+				// Cant have intersect in 2 or 3 spots, must be 4 by definition
+				// of this challenge....
 				continue
 			}
 
-			// Now check for the case of 3 pt intersect
-			if isBot {
-				if (space[row][col-1] == '#' && space[row-1][col] == '#') ||
-					(space[row][col+1] == '#' && space[row-1][col] == '#') {
-					// Intersect
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-			if isRight {
-				if (space[row][col-1] == '#' && space[row-1][col] == '#') ||
-					(space[row][col-1] == '#' && space[row+1][col] == '#') {
-					// Intersect
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-					fmt.Println("Right")
-				}
-				continue
-			}
-
-			if isTop {
-				if (space[row+1][col] == '#' && space[row][col+1] == '#') ||
-					(space[row+1][col] == '#' && space[row][col-1] == '#') {
-					// Intersect
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-
-			if isLeft {
-				if (space[row+1][col] == '#' && space[row][col+1] == '#') ||
-					(space[row-1][col] == '#' && space[row][col+1] == '#') {
-					// Intersect
-					intersect := []int{row, col}
-					intersects = append(intersects, intersect)
-				}
-				continue
-			}
-
-			// Finally its anywhere else, so just check 2 perpendicular spots
-			if (space[row+1][col] == '#' && space[row][col+1] == '#') ||
-				(space[row+1][col] == '#' && space[row][col-1] == '#') ||
-				(space[row-1][col] == '#' && space[row][col-1] == '#') ||
-				(space[row-1][col] == '#' && space[row][col+1] == '#') {
+			if space[row+1][col] == '#' && space[row-1][col] == '#' && space[row][col+1] == '#' && space[row][col-1] == '#' {
 				// Intersect
 				intersect := []int{row, col}
 				intersects = append(intersects, intersect)
@@ -128,7 +58,6 @@ func main() {
 	}
 
 	// Do the computation
-	fmt.Println(len(intersects))
 	sum := 0
 	for _, i := range intersects {
 		sum += i[0] * i[1]
