@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dfontana/adventofcode2019/intcode"
 )
@@ -12,10 +13,47 @@ func main() {
 	conf := intcode.Config()
 	go intcode.Run(data, conf)
 
+	fmt.Println("Part 1", alignmentStep(conf.Output))
+
+	bufIn := make(chan int64, 100)
+	conf2 := intcode.Config().SendDone().SetInput(bufIn)
+	data[0] = 2
+	go intcode.Run(data, conf2)
+
+	fmt.Println("Part 2", traverseStep(conf2.Output, conf2.Input, conf2.Done))
+}
+
+func traverseStep(out <-chan int64, in chan<- int64, done <-chan bool) int64 {
+	mmr := []string{"A", "B", "A", "B", "C", "B", "A", "C", "B", "C"}
+	a := []string{"L", "12", "L", "8", "R", "10", "R", "10"}
+	b := []string{"L", "6", "L", "4", "L", "12"}
+	c := []string{"R", "10", "L", "8", "L", "4", "R", "10"}
+	mmrStr := strings.Join(mmr, ",")
+	aStr := strings.Join(a, ",")
+	bStr := strings.Join(b, ",")
+	cStr := strings.Join(c, ",")
+
+	for _, v := range fmt.Sprintf("%s\n%s\n%s\n%s\nn\n", mmrStr, aStr, bStr, cStr) {
+		in <- int64(v)
+	}
+
+	for {
+		select {
+		case item := <-out:
+			if item > 128 {
+				return item
+			}
+		case <-done:
+			return -1
+		}
+	}
+}
+
+func alignmentStep(out <-chan int64) int {
 	var space [][]rune
 	var row []rune
 	for {
-		item := <-conf.Output
+		item := <-out
 		if item == 0 {
 			space = space[0 : len(space)-1]
 			break
@@ -62,5 +100,5 @@ func main() {
 	for _, i := range intersects {
 		sum += i[0] * i[1]
 	}
-	fmt.Println("Part 1", sum)
+	return sum
 }
