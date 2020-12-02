@@ -1,3 +1,3 @@
-module github.com/dfontana/adventofcode2019
+module github.com/dfontana/adventofcode
 
 go 1.13
