@@ -9,8 +9,8 @@ pub struct Day2 {
 
 #[derive(Debug)]
 struct PasswordEntry {
-  bounds: (i32, i32),
-  ch: String,
+  bounds: (usize, usize),
+  ch: char,
   pass: String,
 }
 
@@ -32,23 +32,23 @@ impl Day2 {
       .and_then(Day2::split_bounds)
       .unwrap();
 
-    let ch = tokens.next().and_then(|s| s.get(0..1)).unwrap().to_string();
+    let ch = tokens.next().and_then(|s| s.chars().nth(0)).unwrap();
 
     let pass = tokens.next().unwrap().to_string();
 
     PasswordEntry { bounds, ch, pass }
   }
 
-  fn split_bounds(bounds: &str) -> Result<(i32, i32), Box<dyn Error>> {
+  fn split_bounds(bounds: &str) -> Result<(usize, usize), Box<dyn Error>> {
     let mut t = bounds.split("-");
     let min = t
       .next()
       .ok_or("Missing lower bound")
-      .map(|s| s.parse::<i32>())??;
+      .map(|s| s.parse::<usize>())??;
     let max = t
       .next()
       .ok_or("Missing upper bound")
-      .map(|s| s.parse::<i32>())??;
+      .map(|s| s.parse::<usize>())??;
     Ok((min, max))
   }
 }
@@ -60,7 +60,7 @@ impl Day for Day2 {
         .input
         .iter()
         .filter(|pwd| {
-          let cnt = pwd.pass.matches(&pwd.ch).count() as i32;
+          let cnt = pwd.pass.matches(pwd.ch).count();
           ((pwd.bounds.0)..(pwd.bounds.1) + 1).contains(&cnt)
         })
         .count()
@@ -69,6 +69,22 @@ impl Day for Day2 {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("".to_string())
+    Ok(
+      self
+        .input
+        .iter()
+        .filter(|pwd| {
+          let mut chars = pwd.pass.chars();
+          let lower = pwd.bounds.0 - 1;
+          let upper = pwd.bounds.1 - pwd.bounds.0 - 1;
+          chars
+            .nth(lower)
+            .filter(|s| s == &pwd.ch)
+            .xor(chars.nth(upper).filter(|s| s == &pwd.ch))
+            .is_some()
+        })
+        .count()
+        .to_string(),
+    )
   }
 }
