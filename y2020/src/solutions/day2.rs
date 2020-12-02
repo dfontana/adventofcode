@@ -25,31 +25,27 @@ impl Day2 {
 
   fn parse_line(line: &str) -> PasswordEntry {
     let mut tokens = line.split_ascii_whitespace();
-
-    let bounds = tokens
-      .next()
-      .ok_or("Bounds Missing".into())
-      .and_then(Day2::split_bounds)
-      .unwrap();
-
-    let ch = tokens.next().and_then(|s| s.chars().nth(0)).unwrap();
-
-    let pass = tokens.next().unwrap().to_string();
-
-    PasswordEntry { bounds, ch, pass }
+    PasswordEntry {
+      bounds: tokens
+        .next()
+        .ok_or("Bounds Missing".into())
+        .and_then(Day2::split_bounds)
+        .unwrap(),
+      ch: tokens.next().and_then(|s| s.chars().nth(0)).unwrap(),
+      pass: tokens.next().unwrap().to_string(),
+    }
   }
 
   fn split_bounds(bounds: &str) -> Result<(usize, usize), Box<dyn Error>> {
     let mut t = bounds.split("-");
-    let min = t
-      .next()
-      .ok_or("Missing lower bound")
-      .map(|s| s.parse::<usize>())??;
-    let max = t
-      .next()
-      .ok_or("Missing upper bound")
-      .map(|s| s.parse::<usize>())??;
-    Ok((min, max))
+    Ok((
+      t.next()
+        .ok_or("Missing lower bound")
+        .map(|s| s.parse::<usize>())??,
+      t.next()
+        .ok_or("Missing upper bound")
+        .map(|s| s.parse::<usize>())??,
+    ))
   }
 }
 
