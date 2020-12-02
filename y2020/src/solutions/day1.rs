@@ -13,14 +13,14 @@ impl Day1 {
       .lines()
       .map(|f| f.parse::<i32>().unwrap())
       .collect();
-    Ok(Day1{numbers})
+    Ok(Day1 { numbers })
   }
 }
 
 impl Day for Day1 {
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     for (idx, v) in self.numbers.iter().enumerate() {
-      for ov in &self.numbers[idx+1..] {
+      for ov in &self.numbers[idx + 1..] {
         let sum = v + ov;
         if sum == 2020 {
           return Ok(format!("{}", v * ov));
@@ -32,8 +32,8 @@ impl Day for Day1 {
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
     for (idx, v) in self.numbers.iter().enumerate() {
-      for (odx, ov) in self.numbers[idx+1..].iter().enumerate() {
-        for ev in &self.numbers[odx+1..] {
+      for (odx, ov) in self.numbers[idx + 1..].iter().enumerate() {
+        for ev in &self.numbers[odx + 1..] {
           let sum = v + ov + ev;
           if sum == 2020 {
             return Ok(format!("{}", v * ov * ev));
