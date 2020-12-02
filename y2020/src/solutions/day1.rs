@@ -1,4 +1,4 @@
-use crate::day::{Day, DayArg, Part};
+use crate::day::{Day, DayArg};
 use crate::util::read_input;
 
 use std::error::Error;
@@ -9,7 +9,7 @@ pub struct Day1 {
 
 impl Day1 {
   pub fn new() -> Result<Day1, Box<dyn Error>> {
-    let numbers: Vec<i32> = read_input(DayArg::D(1), Part::P1)?
+    let numbers: Vec<i32> = read_input(DayArg::D(1))?
       .lines()
       .map(|f| f.parse::<i32>().unwrap())
       .collect();

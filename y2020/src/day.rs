@@ -15,17 +15,10 @@ pub enum DayArg {
   D(i32)
 }
 
-pub enum Part {
-  P1,
-  P2,
-}
-
-impl fmt::Display for Part {
+impl fmt::Display for DayArg {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let val = match self {
-      Part::P1 => 1,
-      Part::P2 => 2,
-    };
-    write!(f, "{}", val)
+    match self {
+      DayArg::D(v) => write!(f, "{}", v),
+    }
   }
 }

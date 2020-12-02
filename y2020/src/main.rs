@@ -1,3 +1,5 @@
+extern crate dotenv;
+
 mod util;
 mod day;
 mod solutions;
@@ -8,6 +10,7 @@ use solutions::Day1;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
+  dotenv::dotenv().ok();
   let day = std::env::args()
     .nth(1)
     .and_then(|v| v.parse::<i32>().ok())
