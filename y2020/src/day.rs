@@ -1,5 +1,5 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 pub trait Day {
   fn p1(&self) -> Result<String, Box<dyn Error>>;
@@ -7,12 +7,12 @@ pub trait Day {
   fn run(&self) -> Result<String, Box<dyn Error>> {
     let p1 = self.p1()?;
     let p2 = self.p2()?;
-    Ok(format!("Part1: {}\nPart2: {}",p1,p2))
+    Ok(format!("Part1: {}\nPart2: {}", p1, p2))
   }
 }
 
 pub enum DayArg {
-  D(i32)
+  D(i32),
 }
 
 impl fmt::Display for DayArg {

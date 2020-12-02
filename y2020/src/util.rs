@@ -1,15 +1,15 @@
+use crate::day::DayArg;
+use std::env;
+use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
-use std::error::Error;
-use std::env;
-use crate::day::DayArg;
 
-use reqwest::{header, {blocking::Client}};
+use reqwest::{blocking::Client, header};
 
 pub fn read_input(day: DayArg) -> Result<String, Box<dyn Error>> {
   let path = match day {
     DayArg::D(v @ 1..=25) => PathBuf::from(format!("./input/d{}", v)),
-    DayArg::D(_) => return Err("Unknown Day Provided".into())
+    DayArg::D(_) => return Err("Unknown Day Provided".into()),
   };
 
   if !path.exists() {

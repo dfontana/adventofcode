@@ -1,10 +1,10 @@
 extern crate dotenv;
 
-mod util;
 mod day;
 mod solutions;
+mod util;
 
-use day::{Day,DayArg};
+use day::{Day, DayArg};
 use solutions::{Day1, Day2};
 
 use std::error::Error;
