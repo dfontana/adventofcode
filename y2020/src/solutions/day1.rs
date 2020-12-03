@@ -7,17 +7,15 @@ pub struct Day1 {
   numbers: Vec<i32>,
 }
 
-impl Day1 {
-  pub fn new() -> Result<Day1, Box<dyn Error>> {
+impl Day for Day1 {
+  fn new() -> Result<Day1, Box<dyn Error>> {
     let numbers: Vec<i32> = read_input(DayArg::D(1))?
       .lines()
       .map(|f| f.parse::<i32>().unwrap())
       .collect();
     Ok(Day1 { numbers })
   }
-}
 
-impl Day for Day1 {
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     for (idx, v) in self.numbers.iter().enumerate() {
       for ov in &self.numbers[idx + 1..] {

@@ -2,6 +2,9 @@ use std::error::Error;
 use std::fmt;
 
 pub trait Day {
+  fn new() -> Result<Self, Box<dyn Error>>
+  where
+    Self: Sized;
   fn p1(&self) -> Result<String, Box<dyn Error>>;
   fn p2(&self) -> Result<String, Box<dyn Error>>;
   fn run(&self) -> Result<String, Box<dyn Error>> {
