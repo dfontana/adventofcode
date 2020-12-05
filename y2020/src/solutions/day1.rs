@@ -3,17 +3,17 @@ use crate::util::read_input;
 
 use std::error::Error;
 
-pub struct Day1 {
+pub struct Solve {
   numbers: Vec<i32>,
 }
 
-impl Day for Day1 {
-  fn new() -> Result<Day1, Box<dyn Error>> {
-    let numbers: Vec<i32> = read_input(DayArg::D(1))?
+impl Day for Solve {
+  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
+    let numbers: Vec<i32> = read_input(d)?
       .lines()
       .map(|f| f.parse::<i32>().unwrap())
       .collect();
-    Ok(Day1 { numbers })
+    Ok(Solve { numbers })
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {

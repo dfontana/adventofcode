@@ -5,14 +5,14 @@ use std::error::Error;
 
 const TREE: u8 = b'#';
 
-pub struct Day3 {
+pub struct Solve {
   input: String,
 }
 
-impl Day for Day3 {
-  fn new() -> Result<Day3, Box<dyn Error>> {
-    Ok(Day3 {
-      input: read_input(DayArg::D(3))?,
+impl Day for Solve {
+  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
+    Ok(Solve {
+      input: read_input(d)?,
     })
   }
 
@@ -34,7 +34,7 @@ impl Day for Day3 {
 // Step by to skip N lines at at ime
 // Enumerate to iterate by (Step Count we're on, the line we're at)
 // Y coord = Step Count, X Coord = StepCount * RightStep; Modulo to wrap around
-fn trees_hit(day: &Day3, right: usize, down: usize) -> usize {
+fn trees_hit(day: &Solve, right: usize, down: usize) -> usize {
   day
     .input
     .lines()

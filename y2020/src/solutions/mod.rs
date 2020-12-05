@@ -2,18 +2,17 @@ mod day1;
 mod day2;
 mod day3;
 mod day4;
-use {day1::Day1, day2::Day2, day3::Day3, day4::Day4};
 
 use crate::day::{Day, DayArg};
 
 use std::error::Error;
 
-pub fn get_runner(day: DayArg) -> Result<Box<dyn Day>, Box<dyn Error>> {
-  match day {
-    DayArg::D(1) => Day1::new().map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(2) => Day2::new().map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(3) => Day3::new().map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(4) => Day4::new().map(|s| Box::new(s) as Box<dyn Day>),
+pub fn get_runner(d: DayArg) -> Result<Box<dyn Day>, Box<dyn Error>> {
+  match d {
+    DayArg::D(1) => day1::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
+    DayArg::D(2) => day2::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
+    DayArg::D(3) => day3::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
+    DayArg::D(4) => day4::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(n) => Err(format!("Unknown Day Given: {}", n).into()),
   }
 }

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt;
 
 pub trait Day {
-  fn new() -> Result<Self, Box<dyn Error>>
+  fn new(d: DayArg) -> Result<Self, Box<dyn Error>>
   where
     Self: Sized;
   fn p1(&self) -> Result<String, Box<dyn Error>>;

@@ -20,14 +20,14 @@ lazy_static! {
   static ref VALID_PASS_ID: Regex = Regex::new("^\\d{9}$").unwrap();
 }
 
-pub struct Day4 {
+pub struct Solve {
   passports: Vec<HashMap<String, String>>,
 }
 
-impl Day for Day4 {
-  fn new() -> Result<Day4, Box<dyn Error>> {
-    Ok(Day4 {
-      passports: read_input(DayArg::D(4))?
+impl Day for Solve {
+  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
+    Ok(Solve {
+      passports: read_input(d)?
         .split("\n\n")
         .map(|passport| {
           passport

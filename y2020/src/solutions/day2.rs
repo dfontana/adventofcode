@@ -3,7 +3,7 @@ use crate::util::read_input;
 
 use std::error::Error;
 
-pub struct Day2 {
+pub struct Solve {
   input: Vec<PasswordEntry>,
 }
 
@@ -39,10 +39,10 @@ fn split_bounds(bounds: &str) -> Result<(usize, usize), Box<dyn Error>> {
   ))
 }
 
-impl Day for Day2 {
-  fn new() -> Result<Day2, Box<dyn Error>> {
-    let input: Vec<PasswordEntry> = read_input(DayArg::D(2))?.lines().map(parse_line).collect();
-    Ok(Day2 { input })
+impl Day for Solve {
+  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
+    let input: Vec<PasswordEntry> = read_input(d)?.lines().map(parse_line).collect();
+    Ok(Solve { input })
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
