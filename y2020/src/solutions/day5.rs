@@ -1,15 +1,13 @@
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
-use std::{error::Error, ops::RangeInclusive, slice::Iter};
+use std::{error::Error, ops::RangeInclusive};
 
 pub struct Solve {
-  lines: Vec<String>,
+  seats: Vec<Seat>,
 }
 struct Seat {
   row_loc: String,
   col_loc: String,
-  row: i32,
-  col: i32,
   id: i32,
 }
 
@@ -18,21 +16,15 @@ impl Seat {
     Seat {
       row_loc: str_split.0.to_string(),
       col_loc: str_split.1.to_string(),
-      row: 0,
-      col: 0,
       id: 0,
     }
   }
 
   pub fn compute(self) -> Seat {
-    let row = search(127, 'F', 'B', 6, &self.row_loc);
-    let col = search(7, 'L', 'R', 2, &self.col_loc);
     Seat {
-      row_loc: self.row_loc,
-      col_loc: self.col_loc,
-      row,
-      col,
-      id: row * 8 + col,
+      row_loc: self.row_loc.clone(),
+      col_loc: self.col_loc.clone(),
+      id: search(127, 'F', 'B', 6, &self.row_loc) * 8 + search(7, 'L', 'R', 2, &self.col_loc),
     }
   }
 
@@ -43,45 +35,33 @@ impl Seat {
 
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      lines: read_input(d)?.lines().map(str::to_string).collect(),
-    })
-  }
-
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    let mut seats = self
-      .lines
-      .iter()
+    let mut seats = read_input(d)?
+      .lines()
       .map(|s| (&s[..7], &s[7..]))
       .map(Seat::new)
       .map(Seat::compute)
       .collect::<Vec<Seat>>();
     seats.sort_by_key(Seat::id);
-    seats
+    Ok(Solve { seats })
+  }
+
+  fn p1(&self) -> Result<String, Box<dyn Error>> {
+    self
+      .seats
       .last()
       .map(|s| s.id.to_string())
       .ok_or("No Seats Parsed".into())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    // Which seats are missing?
-    let mut seats = self
-      .lines
-      .iter()
-      .map(|s| (&s[..7], &s[7..]))
-      .map(Seat::new)
-      .map(Seat::compute)
-      .collect::<Vec<Seat>>();
-    seats.sort_by_key(Seat::id);
-    Ok(
-      seats
-        .windows(3)
-        .filter(|win| win[0].id + 1 != win[1].id || win[1].id + 1 != win[2].id)
-        .map(|win| {
-          win[0].id.to_string() + "," + &win[1].id.to_string() + "," + &win[2].id.to_string()
-        })
-        .fold(String::new(), |a, b| a + &b + "\n"),
-    )
+    self
+      .seats
+      .windows(3)
+      .filter(|win| win[0].id + 1 != win[1].id || win[1].id + 1 != win[2].id)
+      .map(|win| win[1].id + 1)
+      .next()
+      .map(|s| s.to_string())
+      .ok_or("No Missing Seat Found".into())
   }
 }
 
