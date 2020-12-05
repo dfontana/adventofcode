@@ -64,7 +64,24 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    // Which seats are missing?
+    let mut seats = self
+      .lines
+      .iter()
+      .map(|s| (&s[..7], &s[7..]))
+      .map(Seat::new)
+      .map(Seat::compute)
+      .collect::<Vec<Seat>>();
+    seats.sort_by_key(Seat::id);
+    Ok(
+      seats
+        .windows(3)
+        .filter(|win| win[0].id + 1 != win[1].id || win[1].id + 1 != win[2].id)
+        .map(|win| {
+          win[0].id.to_string() + "," + &win[1].id.to_string() + "," + &win[2].id.to_string()
+        })
+        .fold(String::new(), |a, b| a + &b + "\n"),
+    )
   }
 }
 
