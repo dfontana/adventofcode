@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 pub struct Solve {
-  answers: Vec<(usize, HashMap<char, i32>)>,
+  answers: Vec<(i32, HashMap<char, i32>)>,
 }
 
 impl Day for Solve {
@@ -40,7 +40,7 @@ impl Day for Solve {
     let result = self
       .answers
       .iter()
-      .map(|(group_size, map)| map.values().filter(|ct| **ct == *group_size as i32).count())
+      .map(|(group_size, map)| map.values().filter(|ct| **ct == *group_size).count())
       .sum::<usize>()
       .to_string();
     Ok(result)
