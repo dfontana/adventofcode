@@ -10,7 +10,7 @@ impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
     let mut seats = read_input(d)?
       .lines()
-      .map(|s| search(127, &s[..7]) * 8 + search(7, &s[7..]))
+      .map(|s| search(64, &s[..7]) * 8 + search(4, &s[7..]))
       .collect::<Vec<i32>>();
     seats.sort();
     Ok(Solve { seats })
@@ -35,18 +35,12 @@ impl Day for Solve {
   }
 }
 
-fn search(max_bound: usize, loc: &str) -> i32 {
-  let (ops, selector) = (&loc[..loc.len() - 1], &loc[loc.len() - 1..]);
-  let (min, max) = ops
+fn search(init_mask: i32, loc: &str) -> i32 {
+  loc
     .chars()
-    .fold((0.0, max_bound as f64), |(min, max), c| match c {
-      'L' | 'F' => (min, (max - ((max - min) / 2.0)).floor()),
-      'B' | 'R' => ((min + ((max - min) / 2.0)).ceil(), max),
-      _ => (min, max),
-    });
-  match selector {
-    "L" | "F" => min as i32,
-    "B" | "R" => max as i32,
-    _ => 0,
-  }
+    .fold((0, init_mask), |(num, mask), c| match c {
+      'B' | 'R' => (num | mask, mask >> 1),
+      _ => (num, mask >> 1),
+    })
+    .0
 }
