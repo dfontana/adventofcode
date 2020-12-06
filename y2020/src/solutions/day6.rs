@@ -7,14 +7,23 @@ use std::error::Error;
 // Part2: 3406
 
 pub struct Solve {
-  answers: Vec<Vec<String>>,
+  answers: Vec<(usize, HashMap<char, i32>)>,
 }
 
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
     let answers = read_input(d)?
       .split("\n\n")
-      .map(|records| records.split_whitespace().map(str::to_string).collect())
+      .map(|records| {
+        records
+          .split_whitespace()
+          .fold((0, HashMap::new()), |(group_count, mut acc), ans| {
+            ans.chars().for_each(|c| {
+              acc.entry(c).and_modify(|e| *e += 1).or_insert(1);
+            });
+            (group_count + 1, acc)
+          })
+      })
       .collect();
     Ok(Solve { answers })
   }
@@ -23,15 +32,7 @@ impl Day for Solve {
     let result = self
       .answers
       .iter()
-      .map(|set| {
-        set.iter().fold(HashMap::new(), |mut acc, ans| {
-          ans.chars().for_each(|c| {
-            acc.insert(c, true);
-          });
-          acc
-        })
-      })
-      .map(|map| map.len())
+      .map(|(_, map)| map.len())
       .sum::<usize>()
       .to_string();
     Ok(result)
@@ -41,16 +42,11 @@ impl Day for Solve {
     let result = self
       .answers
       .iter()
-      .map(|set| {
-        let set_size = set.len() as i32;
-        let mut counts = set.iter().fold(HashMap::new(), |mut acc, ans| {
-          ans.chars().for_each(|c| {
-            acc.entry(c).and_modify(|e| *e += 1).or_insert(1);
-          });
-          acc
-        });
-        counts.retain(|_, ct| *ct == set_size);
-        counts.len()
+      .map(|(group_size, map)| {
+        map
+          .values()
+          .filter(|ct| **ct == *group_size as i32)
+          .fold(0, |acc, _| acc + 1)
       })
       .sum::<usize>()
       .to_string();
