@@ -3,17 +3,20 @@ use crate::util::read_input;
 use std::collections::HashSet;
 use std::error::Error;
 
+//Part1: 112
+//Part2: 6260
+
 pub struct Solve {
   formulas: Vec<Formula>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Bag {
   name: String,
   count: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Formula {
   result: Bag,
   parts: Vec<Bag>,
@@ -76,7 +79,36 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    // Similarly, if we had a graph, you could just traverse down the graph instead of "up" it
+    let shiny_form = match self.formulas.iter().find(|f| f.result.name == "shiny gold") {
+      None => return Err("Couldn't find shiny gold formula".into()),
+      Some(form) => form,
+    };
+    let mut result = 0;
+    let mut frontier: Vec<String> = shiny_form
+      .parts
+      .iter()
+      .flat_map(|b| std::iter::repeat(b.name.clone()).take(b.count as usize))
+      .collect();
+    while !frontier.is_empty() {
+      let exploring = match frontier.pop() {
+        None => break,
+        Some(b) => b,
+      };
+      for form in self.formulas.iter() {
+        if form.result.name == exploring {
+          form
+            .parts
+            .iter()
+            .flat_map(|b| std::iter::repeat(b.clone()).take(b.count as usize))
+            .for_each(|b| {
+              frontier.push(b.name)
+            });
+        }
+      }
+      result += 1;
+    }
+    Ok(result.to_string())
   }
 }
 
