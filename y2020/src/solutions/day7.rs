@@ -1,5 +1,6 @@
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
+use std::collections::HashSet;
 use std::error::Error;
 
 pub struct Solve {
@@ -39,9 +40,8 @@ impl Day for Solve {
                 let num_split = clean.find(" ").unwrap();
                 let name = trim_bag_off(&clean[num_split..]);
                 match (&clean[..num_split]).parse::<i32>() {
-                  Ok(count) => Some(
-                    Bag {count,name}),
-                  Err(_) => None
+                  Ok(count) => Some(Bag { count, name }),
+                  Err(_) => None,
                 }
               })
               .collect(),
@@ -54,7 +54,25 @@ impl Day for Solve {
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     // Given "shiny gold", how many colors eventually contain one?
     // Could probably represent this as a graph and be much more efficient
-    Ok("Impl".to_string())
+    //    - Start at shiny bag entry
+    //    - Count parents
+    //    - Traverse up each parent and count their parents.
+    //    - continue until no more parents.
+    let mut result: HashSet<String> = HashSet::new();
+    let mut frontier: Vec<String> = vec!["shiny gold".to_string()];
+    while !frontier.is_empty() {
+      let exploring = match frontier.pop() {
+        None => break,
+        Some(name) => name,
+      };
+      for form in self.formulas.iter() {
+        if form.parts.iter().any(|b| b.name == exploring) {
+          result.insert(form.result.name.to_string());
+          frontier.push(form.result.name.to_string());
+        }
+      }
+    }
+    Ok(result.len().to_string())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
@@ -64,7 +82,7 @@ impl Day for Solve {
 
 fn trim_bag_off(name: &str) -> String {
   name
-  .trim_end_matches('.')
+    .trim_end_matches('.')
     .trim_end_matches("bags")
     .trim_end_matches("bag")
     .trim()
