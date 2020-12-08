@@ -3,9 +3,8 @@ use crate::util::read_input;
 use std::collections::HashSet;
 use std::error::Error;
 
-//Part1: 112
-//Part2: 6260
-
+// A graph might be better suited to this problem, but modeling
+// that in rust is surprisingly non-trivial. TIL.
 pub struct Solve {
   formulas: Vec<Formula>,
 }
@@ -32,21 +31,14 @@ impl Day for Solve {
           Formula {
             result: Bag {
               count: 1,
-              name: trim_bag_off(lr.next().unwrap().trim()),
+              name: trim_bag_off(lr.next().unwrap()),
             },
             parts: lr
               .next()
               .unwrap()
               .split(",")
-              .filter_map(|e| {
-                let clean = e.trim();
-                let num_split = clean.find(" ").unwrap();
-                let name = trim_bag_off(&clean[num_split..]);
-                match (&clean[..num_split]).parse::<i32>() {
-                  Ok(count) => Some(Bag { count, name }),
-                  Err(_) => None,
-                }
-              })
+              .filter_map(pull_name_count)
+              .map(|(count, name)| Bag { name, count })
               .collect(),
           }
         })
@@ -55,12 +47,6 @@ impl Day for Solve {
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
-    // Given "shiny gold", how many colors eventually contain one?
-    // Could probably represent this as a graph and be much more efficient
-    //    - Start at shiny bag entry
-    //    - Count parents
-    //    - Traverse up each parent and count their parents.
-    //    - continue until no more parents.
     let mut result: HashSet<String> = HashSet::new();
     let mut frontier: Vec<String> = vec!["shiny gold".to_string()];
     while !frontier.is_empty() {
@@ -79,7 +65,6 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    // Similarly, if we had a graph, you could just traverse down the graph instead of "up" it
     let shiny_form = match self.formulas.iter().find(|f| f.result.name == "shiny gold") {
       None => return Err("Couldn't find shiny gold formula".into()),
       Some(form) => form,
@@ -101,9 +86,7 @@ impl Day for Solve {
             .parts
             .iter()
             .flat_map(|b| std::iter::repeat(b.clone()).take(b.count as usize))
-            .for_each(|b| {
-              frontier.push(b.name)
-            });
+            .for_each(|b| frontier.push(b.name));
         }
       }
       result += 1;
@@ -114,9 +97,20 @@ impl Day for Solve {
 
 fn trim_bag_off(name: &str) -> String {
   name
+    .trim()
     .trim_end_matches('.')
     .trim_end_matches("bags")
     .trim_end_matches("bag")
     .trim()
     .to_string()
+}
+
+fn pull_name_count(s: &str) -> Option<(i32, String)> {
+  let clean = s.trim();
+  let num_split = clean.find(" ").unwrap();
+  let name = trim_bag_off(&clean[num_split..]);
+  match (&clean[..num_split]).parse::<i32>() {
+    Ok(count) => Some((count, name)),
+    Err(_) => None,
+  }
 }
