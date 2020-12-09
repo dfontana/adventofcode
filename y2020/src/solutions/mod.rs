@@ -5,6 +5,7 @@ mod day4;
 mod day5;
 mod day6;
 mod day7;
+mod day8;
 
 use crate::day::{Day, DayArg};
 
@@ -19,6 +20,7 @@ pub fn get_runner(d: DayArg) -> Result<Box<dyn Day>, Box<dyn Error>> {
     DayArg::D(5) => day5::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(6) => day6::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(7) => day7::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
+    DayArg::D(8) => day8::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(n) => Err(format!("Unknown Day Given: {}", n).into()),
   }
 }
