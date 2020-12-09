@@ -62,28 +62,28 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    let last_accs = self
+    self
       .tape
       .repeat(self.tape.len())
       .chunks_mut(self.tape.len())
       .enumerate()
       .flat_map(|(idx, chunk)| {
-        let mut jmp = chunk.to_owned();
-        let mut nop = chunk.to_owned();
+        let mut alt = chunk.to_owned();
         match chunk[idx] {
-          Instruction::NOP(amt) => jmp[idx] = Instruction::JMP(amt),
-          Instruction::JMP(amt) => nop[idx] = Instruction::NOP(amt),
+          Instruction::NOP(amt) => alt[idx] = Instruction::JMP(amt),
+          Instruction::JMP(amt) => alt[idx] = Instruction::NOP(amt),
           _ => return vec![],
         }
-        vec![(idx, jmp), (idx, nop)]
+        vec![(idx, chunk[idx], chunk.to_owned()), (idx, alt[idx], alt)]
       })
-      .map(|(idx, t)| (idx, run_tape(&t.to_vec())))
-      .filter_map(|(idx, res)| match res {
-        Terminate::NORMAL(amt) => Some((idx, amt)),
+      .map(|(idx, ins, t)| (idx, ins, run_tape(&t.to_vec())))
+      .filter_map(|(idx, ins, res)| match res {
+        Terminate::NORMAL(amt) => Some((idx, ins, amt)),
         _ => None,
       })
-      .collect::<Vec<(usize, i32)>>();
-    Ok(format!("{:?}", last_accs))
+      .next()
+      .map(|(idx, ins, acc)| format!("Acc {} - INS {} to {:?}", acc, idx, ins))
+      .ok_or("Did not find normal termination".into())
   }
 }
 
