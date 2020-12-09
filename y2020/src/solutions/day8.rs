@@ -57,12 +57,13 @@ impl Day for Solve {
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     match run_tape(&self.tape) {
       Terminate::LOOP(amt) => Ok(amt.to_string()),
-      _ => Err("No loop found".into())
+      _ => Err("No loop found".into()),
     }
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    let last_accs = self.tape
+    let last_accs = self
+      .tape
       .repeat(self.tape.len())
       .chunks_mut(self.tape.len())
       .enumerate()
@@ -72,16 +73,14 @@ impl Day for Solve {
         match chunk[idx] {
           Instruction::NOP(amt) => jmp[idx] = Instruction::JMP(amt),
           Instruction::JMP(amt) => nop[idx] = Instruction::NOP(amt),
-          _ => return vec![]
+          _ => return vec![],
         }
         vec![(idx, jmp), (idx, nop)]
       })
       .map(|(idx, t)| (idx, run_tape(&t.to_vec())))
-      .filter_map(|(idx, res)| {
-        match res {
-          Terminate::NORMAL(amt) => Some((idx, amt)),
-          _ => None,
-        }
+      .filter_map(|(idx, res)| match res {
+        Terminate::NORMAL(amt) => Some((idx, amt)),
+        _ => None,
       })
       .collect::<Vec<(usize, i32)>>();
     Ok(format!("{:?}", last_accs))
