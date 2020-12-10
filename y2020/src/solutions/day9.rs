@@ -25,13 +25,16 @@ impl Day for Solve {
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
     let target = find_no_sum_num(&self.data).ok_or("No invalid nums found")?;
-    for start in 0..self.data.len() {
-      match has_contiguous_sum(&self.data[start..], target) {
-        None => continue,
-        Some(list) => return Ok(sum_min_max(&list).to_string()),
-      }
-    }
-    Err("No solution found".into())
+    let sum_list = (0..self.data.len())
+      .into_iter()
+      .find_map(|f| has_contiguous_sum(&self.data[f..], target))
+      .ok_or("No solution found")?;
+    sum_list
+      .iter()
+      .min()
+      .and_then(|min| sum_list.iter().max().map(|max| min + max))
+      .map(|f| f.to_string())
+      .ok_or("No solution found".into())
   }
 }
 
@@ -41,18 +44,6 @@ fn find_no_sum_num(list: &Vec<i32>) -> Option<i32> {
     .map(|win| (&win[..win.len() - 1], win[win.len() - 1]))
     .find(has_no_pair)
     .map(|(_, v)| v)
-}
-
-fn sum_min_max(list: &Vec<i32>) -> i32 {
-  let min = match list.iter().min() {
-    Some(v) => v,
-    None => &0,
-  };
-  let max = match list.iter().max() {
-    Some(v) => v,
-    None => &0,
-  };
-  min + max
 }
 
 fn has_no_pair(pair: &(&[i32], i32)) -> bool {
