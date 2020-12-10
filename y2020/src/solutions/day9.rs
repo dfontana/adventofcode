@@ -29,12 +29,7 @@ impl Day for Solve {
       .into_iter()
       .find_map(|f| has_contiguous_sum(&self.data[f..], target))
       .ok_or("No solution found")?;
-    sum_list
-      .iter()
-      .min()
-      .and_then(|min| sum_list.iter().max().map(|max| min + max))
-      .map(|f| f.to_string())
-      .ok_or("No solution found".into())
+    Ok((sum_list.iter().min().unwrap() + sum_list.iter().max().unwrap()).to_string())
   }
 }
 
@@ -43,14 +38,9 @@ fn find_no_sum_num(list: &Vec<i32>) -> Option<i32> {
     .windows(26)
     .map(|win| (&win[..win.len() - 1], win[win.len() - 1]))
     .find(|(win, goal)| {
-      for (i, v1) in win.iter().enumerate() {
-        for v2 in win[i + 1..].iter() {
-          if v1 + v2 == *goal {
-            return false;
-          }
-        }
-      }
-      true
+      !win
+        .iter()
+        .any(|w| (goal - w) != *w && win.contains(&(goal - w)))
     })
     .map(|(_, v)| v)
 }
