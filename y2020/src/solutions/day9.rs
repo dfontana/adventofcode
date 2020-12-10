@@ -42,19 +42,17 @@ fn find_no_sum_num(list: &Vec<i32>) -> Option<i32> {
   list
     .windows(26)
     .map(|win| (&win[..win.len() - 1], win[win.len() - 1]))
-    .find(has_no_pair)
-    .map(|(_, v)| v)
-}
-
-fn has_no_pair(pair: &(&[i32], i32)) -> bool {
-  for (i, v1) in pair.0.iter().enumerate() {
-    for v2 in pair.0[i + 1..].iter() {
-      if v1 + v2 == pair.1 {
-        return false;
+    .find(|(win, goal)| {
+      for (i, v1) in win.iter().enumerate() {
+        for v2 in win[i + 1..].iter() {
+          if v1 + v2 == *goal {
+            return false;
+          }
+        }
       }
-    }
-  }
-  true
+      true
+    })
+    .map(|(_, v)| v)
 }
 
 fn has_contiguous_sum(list: &[i32], val: i32) -> Option<Vec<i32>> {
