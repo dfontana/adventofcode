@@ -1,5 +1,6 @@
 mod day1;
 mod day10;
+mod day11;
 mod day2;
 mod day3;
 mod day4;
@@ -25,6 +26,7 @@ pub fn get_runner(d: DayArg) -> Result<Box<dyn Day>, Box<dyn Error>> {
     DayArg::D(8) => day8::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(9) => day9::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(10) => day10::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
+    DayArg::D(11) => day11::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
     DayArg::D(n) => Err(format!("Unknown Day Given: {}", n).into()),
   }
 }
