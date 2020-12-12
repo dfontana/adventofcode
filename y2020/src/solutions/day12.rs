@@ -110,6 +110,39 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let (mut ship_x, mut ship_y) = (0, 0);
+    let (mut wp_x, mut wp_y) = (10, 1);
+    for act in self.actions.iter() {
+      match act {
+        Action::L(amt) => {
+          let f = -to_rad(*amt as f32);
+          let a_x = (((wp_x as f32) * f32::cos(f)) + ((wp_y as f32) * f32::sin(f))).round() as i32;
+          let a_y = (((wp_y as f32) * f32::cos(f)) - ((wp_x as f32) * f32::sin(f))).round() as i32;
+          wp_x = a_x;
+          wp_y = a_y;
+        }
+        Action::R(amt) => {
+          let f = to_rad(*amt as f32);
+          let a_x = (((wp_x as f32) * f32::cos(f)) + ((wp_y as f32) * f32::sin(f))).round() as i32;
+          let a_y = (((wp_y as f32) * f32::cos(f)) - ((wp_x as f32) * f32::sin(f))).round() as i32;
+          wp_x = a_x;
+          wp_y = a_y;
+        }
+        Action::F(amt) => {
+          ship_x += wp_x * amt;
+          ship_y += wp_y * amt;
+        }
+        Action::N(amt) => wp_y += amt,
+        Action::S(amt) => wp_y -= amt,
+        Action::E(amt) => wp_x += amt,
+        Action::W(amt) => wp_x -= amt,
+      }
+      // println!("Ship: ({},{}). WP: ({},{})", ship_x, ship_y, wp_x, wp_y);
+    }
+    Ok((ship_x.abs() + ship_y.abs()).to_string())
   }
+}
+
+fn to_rad(x: f32) -> f32 {
+  x * (std::f32::consts::PI / 180.0)
 }
