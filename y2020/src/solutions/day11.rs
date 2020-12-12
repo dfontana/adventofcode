@@ -1,7 +1,6 @@
-use std::time::Duration;
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
-use std::{error::Error, fmt::Display, str::FromStr, thread};
+use std::{error::Error, fmt::Display, str::FromStr};
 
 pub struct Solve {
   tiles: Vec<Tile>,
@@ -55,12 +54,8 @@ impl Day for Solve {
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     let mut state = self.tiles.clone();
-    print_state(&state, self.width);
     while let Some(next) = update_state(&state, self.width) {
-      thread::sleep(Duration::from_millis(200));
-      print_state(&next, self.width);
       state = next;
-      break;
     }
     Ok(
       state
@@ -93,29 +88,41 @@ fn update_state(state: &Vec<Tile>, width: usize) -> Option<Vec<Tile>> {
 }
 
 fn update_tile(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool) {
-  print!("\nLooking at {}\n", idx);
-  fn wrap(idx: i32, width: i32, row: i32, col: i32) -> i32 {
-    ((idx/width) * width) + row + (idx%width) + col
+  if *t == Tile::Floor {
+    return (t.to_owned(), false);
+  }
+  fn wrap(idx: i32, width: i32, row_adj: i32, col_adj: i32) -> i32 {
+    let row = (idx / width) + row_adj;
+    let col = (idx + col_adj) % width;
+    let will_wrap = ((idx + col_adj) / width) != (idx / width);
+    if will_wrap {
+      return -100;
+    }
+    if row < 0 || col < 0 {
+      -100
+    } else {
+      row * width + col
+    }
   }
   let occupied = [
-    idx - 1),
-    idx + 1,
-    idx - width - 1,
-    idx - width,
-    idx - width + 1,
-    idx + width - 1,
-    idx + width,
-    idx + width + 1,
+    wrap(idx, width, 0, -1),
+    wrap(idx, width, 0, 1),
+    wrap(idx, width, -1, -1),
+    wrap(idx, width, -1, 0),
+    wrap(idx, width, -1, 1),
+    wrap(idx, width, 1, -1),
+    wrap(idx, width, 1, 0),
+    wrap(idx, width, 1, 1),
   ]
   .iter()
   .filter_map(|f| {
-    print!("A{} ", f);
-    if *f < 0 { None } else { Some(*f as usize) }
+    if *f < 0 || *f == idx {
+      None
+    } else {
+      Some(*f as usize)
+    }
   })
-  .filter_map(|f| {
-    print!("C{} - {:?};", f, state.get(f));
-    state.get(f)
-  })
+  .filter_map(|f| state.get(f))
   .filter(|t| **t == Tile::Occupied)
   .count();
 
@@ -137,8 +144,7 @@ fn update_tile(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool
 }
 
 fn print_state(state: &Vec<Tile>, width: usize) {
-  // print!("\x1B[2J\x1B[1;1H");
-  println!("{:-<10}", "-");
+  print!("\x1B[2J\x1B[1;1H");
   state
     .chunks(width)
     .map(|chunk| {
