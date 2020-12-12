@@ -47,36 +47,6 @@ impl FromStr for Action {
   }
 }
 
-impl Direction {
-  fn turn(&self, act: &Action) -> Direction {
-    let upper = match act {
-      Action::R(amt) | Action::L(amt) => amt,
-      _ => return self.clone(),
-    };
-    let mut crt = 0;
-    let mut fin = self.clone();
-    while crt < *upper {
-      fin = match act {
-        Action::L(_) => match fin {
-          Direction::North => Direction::West,
-          Direction::West => Direction::South,
-          Direction::South => Direction::East,
-          Direction::East => Direction::North,
-        },
-        Action::R(_) => match fin {
-          Direction::North => Direction::East,
-          Direction::East => Direction::South,
-          Direction::South => Direction::West,
-          Direction::West => Direction::North,
-        },
-        _ => return fin,
-      };
-      crt += 90;
-    }
-    fin
-  }
-}
-
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
     Ok(Solve {
@@ -93,7 +63,29 @@ impl Day for Solve {
     let (mut x, mut y) = (0, 0);
     for act in self.actions.iter() {
       match act {
-        Action::L(_) | Action::R(_) => dir = dir.turn(act),
+        Action::L(amt) | Action::R(amt) => {
+          let mut crt = 0;
+          let mut fin = dir.clone();
+          while crt < *amt {
+            fin = match act {
+              Action::L(_) => match fin {
+                Direction::North => Direction::West,
+                Direction::West => Direction::South,
+                Direction::South => Direction::East,
+                Direction::East => Direction::North,
+              },
+              Action::R(_) => match fin {
+                Direction::North => Direction::East,
+                Direction::East => Direction::South,
+                Direction::South => Direction::West,
+                Direction::West => Direction::North,
+              },
+              _ => fin,
+            };
+            crt += 90;
+          }
+          dir = fin
+        }
         Action::F(amt) => match dir {
           Direction::North => y += amt,
           Direction::East => x += amt,
@@ -115,18 +107,14 @@ impl Day for Solve {
     for act in self.actions.iter() {
       match act {
         Action::L(amt) => {
-          let f = -to_rad(*amt as f32);
-          let a_x = (((wp_x as f32) * f32::cos(f)) + ((wp_y as f32) * f32::sin(f))).round() as i32;
-          let a_y = (((wp_y as f32) * f32::cos(f)) - ((wp_x as f32) * f32::sin(f))).round() as i32;
-          wp_x = a_x;
-          wp_y = a_y;
+          let (x, y) = rotate(-*amt, wp_x, wp_y);
+          wp_x = x;
+          wp_y = y;
         }
         Action::R(amt) => {
-          let f = to_rad(*amt as f32);
-          let a_x = (((wp_x as f32) * f32::cos(f)) + ((wp_y as f32) * f32::sin(f))).round() as i32;
-          let a_y = (((wp_y as f32) * f32::cos(f)) - ((wp_x as f32) * f32::sin(f))).round() as i32;
-          wp_x = a_x;
-          wp_y = a_y;
+          let (x, y) = rotate(*amt, wp_x, wp_y);
+          wp_x = x;
+          wp_y = y;
         }
         Action::F(amt) => {
           ship_x += wp_x * amt;
@@ -137,12 +125,14 @@ impl Day for Solve {
         Action::E(amt) => wp_x += amt,
         Action::W(amt) => wp_x -= amt,
       }
-      // println!("Ship: ({},{}). WP: ({},{})", ship_x, ship_y, wp_x, wp_y);
     }
     Ok((ship_x.abs() + ship_y.abs()).to_string())
   }
 }
 
-fn to_rad(x: f32) -> f32 {
-  x * (std::f32::consts::PI / 180.0)
+fn rotate(deg: i32, x: i32, y: i32) -> (i32, i32) {
+  let f = (deg as f32) * (std::f32::consts::PI / 180.0);
+  let a_x = (((x as f32) * f32::cos(f)) + ((y as f32) * f32::sin(f))).round() as i32;
+  let a_y = (((y as f32) * f32::cos(f)) - ((x as f32) * f32::sin(f))).round() as i32;
+  (a_x, a_y)
 }
