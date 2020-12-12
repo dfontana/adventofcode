@@ -68,9 +68,9 @@ impl Day for Solve {
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
     let mut state = self.tiles.clone();
-    print_state(&state, self.width);
+    // print_state(&state, self.width);
     while let Some(next) = update_state2(&state, self.width) {
-      print_state(&next, self.width);
+      // print_state(&next, self.width);
       state = next;
     }
     Ok(
@@ -175,7 +175,7 @@ fn update_tile2(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, boo
   if *t == Tile::Floor {
     return (t.to_owned(), false);
   }
-  fn search(idx: i32, width: i32, row_adj: i32, col_adj: i32) -> Option<i32> {
+  fn adv(idx: i32, width: i32, row_adj: i32, col_adj: i32) -> Option<i32> {
     let row = (idx / width) + row_adj;
     let col = (idx + col_adj) % width;
     let will_wrap = ((idx + col_adj) / width) != (idx / width);
@@ -184,25 +184,32 @@ fn update_tile2(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, boo
     }
     Some(row * width + col)
   }
-  let occupied = [
-    search(idx, width, 0, -1),
-    search(idx, width, 0, 1),
-    search(idx, width, -1, -1),
-    search(idx, width, -1, 0),
-    search(idx, width, -1, 1),
-    search(idx, width, 1, -1),
-    search(idx, width, 1, 0),
-    search(idx, width, 1, 1),
-  ]
+
+  fn find_first_non_floor(state: &Vec<Tile>, s: i32, w: i32, (ty, tx): (i32,i32)) -> Option<Tile> {
+    let mut s = s;
+    while let Some(idx) = adv(s, w, ty, tx) {
+      let tile = match state.get(idx as usize) {
+        None => return None,
+        Some(t) => t,
+      };
+      if *tile != Tile::Floor {
+        return Some(tile.to_owned());
+      }
+      s = idx;
+    }
+    None
+  }
+
+  let trag = [(0, -1),(0, 1),(-1, -1),(-1, 0),(-1, 1),(1, -1),(1, 0),(1, 1)];
+  let occupied = trag
   .iter()
-  .flatten()
-  .filter_map(|f| state.get(*f as usize))
-  .filter(|t| **t == Tile::Occupied)
+  .filter_map(|f| find_first_non_floor(state, idx, width, *f))
+  .filter(|t| *t == Tile::Occupied)
   .count();
 
   match t {
     Tile::Occupied => {
-      if occupied >= 4 { // <--- Bumped to 5 here
+      if occupied >= 5 { // <--- Bumped to 5 here
         return (Tile::Empty, true);
       }
       (t.to_owned(), false)
