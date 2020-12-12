@@ -48,7 +48,7 @@ impl Day for Solve {
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     let mut state = self.tiles.clone();
-    while let Some(next) = update_state(&state, self.width) {
+    while let Some(next) = update_state(&state, self.width, update_tile) {
       state = next;
     }
     Ok(
@@ -62,7 +62,7 @@ impl Day for Solve {
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
     let mut state = self.tiles.clone();
-    while let Some(next) = update_state2(&state, self.width) {
+    while let Some(next) = update_state(&state, self.width, update_tile2) {
       state = next;
     }
     Ok(
@@ -75,12 +75,15 @@ impl Day for Solve {
   }
 }
 
-fn update_state(state: &Vec<Tile>, width: usize) -> Option<Vec<Tile>> {
+fn update_state<F>(state: &Vec<Tile>, width: usize, func: F) -> Option<Vec<Tile>>
+where
+  F: Fn(&Vec<Tile>, i32, &Tile, i32) -> (Tile, bool),
+{
   let (next_state, changed) = state
     .clone()
     .iter()
     .enumerate()
-    .map(|(idx, t)| update_tile(idx as i32, t, width as i32, state))
+    .map(|(idx, t)| func(state, width as i32, t, idx as i32))
     .fold((Vec::new(), false), |(mut acc, ch), (t, u)| {
       acc.push(t.clone());
       (acc, ch || u)
@@ -91,34 +94,33 @@ fn update_state(state: &Vec<Tile>, width: usize) -> Option<Vec<Tile>> {
   }
 }
 
-fn update_tile(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool) {
+fn update_tile(state: &Vec<Tile>, width: i32, t: &Tile, idx: i32) -> (Tile, bool) {
   if *t == Tile::Floor {
     return (t.to_owned(), false);
-  }
-
-  fn adv(idx: i32, width: i32, (ty, tx): Trajectory) -> Option<i32> {
-    let row = (idx / width) + ty;
-    let col = (idx + tx) % width;
-    let will_wrap = ((idx + tx) / width) != (idx / width);
-    if will_wrap || row < 0 || col < 0 {
-      return None;
-    }
-    Some(row * width + col)
   }
 
   fn find_adjacent(state: &Vec<Tile>, s: i32, w: i32, t: Trajectory) -> Option<Tile> {
     match adv(s, w, t) {
       None => None,
-      Some(idx) => state.get(idx as usize).map(|t| t.to_owned())
+      Some(idx) => state.get(idx as usize).map(|t| t.to_owned()),
     }
   }
 
-  let traj = [(0, -1),(0, 1),(-1, -1),(-1, 0),(-1, 1),(1, -1),(1, 0),(1, 1)];
+  let traj = [
+    (0, -1),
+    (0, 1),
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+  ];
   let occupied = traj
-  .iter()
-  .filter_map(|f| find_adjacent(state, idx, width, *f))
-  .filter(|t| *t == Tile::Occupied)
-  .count();
+    .iter()
+    .filter_map(|f| find_adjacent(state, idx, width, *f))
+    .filter(|t| *t == Tile::Occupied)
+    .count();
 
   match (t, occupied) {
     (Tile::Occupied, _) if occupied >= 4 => (Tile::Empty, true),
@@ -127,34 +129,19 @@ fn update_tile(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool
   }
 }
 
-fn update_state2(state: &Vec<Tile>, width: usize) -> Option<Vec<Tile>> {
-  let (next_state, changed) = state
-    .clone()
-    .iter()
-    .enumerate()
-    .map(|(idx, t)| update_tile2(idx as i32, t, width as i32, state))
-    .fold((Vec::new(), false), |(mut acc, ch), (t, u)| {
-      acc.push(t.clone());
-      (acc, ch || u)
-    });
-  match changed {
-    false => None,
-    true => Some(next_state),
+fn adv(idx: i32, width: i32, (ty, tx): Trajectory) -> Option<i32> {
+  let row = (idx / width) + ty;
+  let col = (idx + tx) % width;
+  let will_wrap = ((idx + tx) / width) != (idx / width);
+  if will_wrap || row < 0 || col < 0 {
+    return None;
   }
+  Some(row * width + col)
 }
 
-fn update_tile2(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool) {
+fn update_tile2(state: &Vec<Tile>, width: i32, t: &Tile, idx: i32) -> (Tile, bool) {
   if *t == Tile::Floor {
     return (t.to_owned(), false);
-  }
-  fn adv(idx: i32, width: i32, (ty, tx): Trajectory) -> Option<i32> {
-    let row = (idx / width) + ty;
-    let col = (idx + tx) % width;
-    let will_wrap = ((idx + tx) / width) != (idx / width);
-    if will_wrap || row < 0 || col < 0 {
-      return None;
-    }
-    Some(row * width + col)
   }
 
   fn find_first_non_floor(state: &Vec<Tile>, s: i32, w: i32, t: Trajectory) -> Option<Tile> {
@@ -163,18 +150,27 @@ fn update_tile2(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, boo
       match state.get(idx as usize) {
         Some(Tile::Floor) => s = idx,
         None => return None,
-        Some(t) => return Some(t.to_owned())
+        Some(t) => return Some(t.to_owned()),
       }
     }
     None
   }
 
-  let traj = [(0, -1),(0, 1),(-1, -1),(-1, 0),(-1, 1),(1, -1),(1, 0),(1, 1)];
+  let traj = [
+    (0, -1),
+    (0, 1),
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+  ];
   let occupied = traj
-  .iter()
-  .filter_map(|f| find_first_non_floor(state, idx, width, *f))
-  .filter(|t| *t == Tile::Occupied)
-  .count();
+    .iter()
+    .filter_map(|f| find_first_non_floor(state, idx, width, *f))
+    .filter(|t| *t == Tile::Occupied)
+    .count();
 
   match (t, occupied) {
     (Tile::Occupied, _) if occupied >= 5 => (Tile::Empty, true),
