@@ -67,7 +67,19 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let mut state = self.tiles.clone();
+    print_state(&state, self.width);
+    while let Some(next) = update_state2(&state, self.width) {
+      print_state(&next, self.width);
+      state = next;
+    }
+    Ok(
+      state
+        .iter()
+        .filter(|f| **f == Tile::Occupied)
+        .count()
+        .to_string(),
+    )
   }
 }
 
@@ -143,8 +155,71 @@ fn update_tile(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool
   }
 }
 
+fn update_state2(state: &Vec<Tile>, width: usize) -> Option<Vec<Tile>> {
+  let (next_state, changed) = state
+    .clone()
+    .iter()
+    .enumerate()
+    .map(|(idx, t)| update_tile2(idx as i32, t, width as i32, state))
+    .fold((Vec::new(), false), |(mut acc, ch), (t, u)| {
+      acc.push(t.clone());
+      (acc, ch || u)
+    });
+  match changed {
+    false => None,
+    true => Some(next_state),
+  }
+}
+
+fn update_tile2(idx: i32, t: &Tile, width: i32, state: &Vec<Tile>) -> (Tile, bool) {
+  if *t == Tile::Floor {
+    return (t.to_owned(), false);
+  }
+  fn search(idx: i32, width: i32, row_adj: i32, col_adj: i32) -> Option<i32> {
+    let row = (idx / width) + row_adj;
+    let col = (idx + col_adj) % width;
+    let will_wrap = ((idx + col_adj) / width) != (idx / width);
+    if will_wrap || row < 0 || col < 0 {
+      return None;
+    }
+    Some(row * width + col)
+  }
+  let occupied = [
+    search(idx, width, 0, -1),
+    search(idx, width, 0, 1),
+    search(idx, width, -1, -1),
+    search(idx, width, -1, 0),
+    search(idx, width, -1, 1),
+    search(idx, width, 1, -1),
+    search(idx, width, 1, 0),
+    search(idx, width, 1, 1),
+  ]
+  .iter()
+  .flatten()
+  .filter_map(|f| state.get(*f as usize))
+  .filter(|t| **t == Tile::Occupied)
+  .count();
+
+  match t {
+    Tile::Occupied => {
+      if occupied >= 4 { // <--- Bumped to 5 here
+        return (Tile::Empty, true);
+      }
+      (t.to_owned(), false)
+    }
+    Tile::Empty => {
+      if occupied == 0 {
+        return (Tile::Occupied, true);
+      }
+      (t.to_owned(), false)
+    }
+    _ => (t.to_owned(), false),
+  }
+}
+
+
 fn print_state(state: &Vec<Tile>, width: usize) {
-  print!("\x1B[2J\x1B[1;1H");
+  println!("{:-<10}", "-");
   state
     .chunks(width)
     .map(|chunk| {
