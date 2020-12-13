@@ -2,7 +2,7 @@ use crate::day::{Day, DayArg};
 use crate::util::read_input;
 use std::{error::Error, str::FromStr};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
   N(i32),
   S(i32),
@@ -13,7 +13,7 @@ enum Action {
   F(i32),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 enum Direction {
   North,
   East,
@@ -64,27 +64,18 @@ impl Day for Solve {
     for act in self.actions.iter() {
       match act {
         Action::L(amt) | Action::R(amt) => {
-          let mut crt = 0;
-          let mut fin = dir.clone();
-          while crt < *amt {
-            fin = match act {
-              Action::L(_) => match fin {
-                Direction::North => Direction::West,
-                Direction::West => Direction::South,
-                Direction::South => Direction::East,
-                Direction::East => Direction::North,
-              },
-              Action::R(_) => match fin {
-                Direction::North => Direction::East,
-                Direction::East => Direction::South,
-                Direction::South => Direction::West,
-                Direction::West => Direction::North,
-              },
-              _ => fin,
-            };
-            crt += 90;
-          }
-          dir = fin
+          let mut t = [
+            Direction::North,
+            Direction::West,
+            Direction::South,
+            Direction::East,
+          ];
+          match act {
+            Action::R(_) => t.reverse(),
+            _ => (),
+          };
+          let idx: usize = t.iter().position(|d| *d == dir).unwrap();
+          dir = t[(idx + (amt / 90) as usize) % 4].clone();
         }
         Action::F(amt) => match dir {
           Direction::North => y += amt,
