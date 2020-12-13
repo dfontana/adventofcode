@@ -38,34 +38,22 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    let mut n = 1;
-    let mut all_equal = false;
-    while !all_equal {
-      all_equal = true;
-      let mut buses = self.buses.iter();
-
-      let test: usize = buses.next().map(|(_, bus)| bus * n).unwrap();
-
-      for (t, bus) in buses {
-        if (test + t) % bus != 0 {
-          all_equal = false;
-          n += 1;
-          break;
-        }
-      }
-
-      if all_equal {
-        break;
-      }
-    }
-    Ok(
-      self
-        .buses
-        .iter()
-        .next()
-        .map(|(_, bus)| bus * n)
-        .unwrap()
-        .to_string(),
-    )
+    // Can't claim this one as mine :/ Not a numberphile, so the concept of
+    // Chinese Remainder Theorem is new to me
+    let (ans, _) = self
+      .buses
+      .iter()
+      .fold((0, 1), |(mut sol, step), (t, bus_id)| {
+        // 1. Walk common multiple of all prior bus's
+        // 2. Stop at num whom adding the offset results in multiple for this bus
+        // 3. Factor this bus into the CM, and repeat for the next until all are considered
+        //    Starting with the number we found in 2.
+        sol = (sol..)
+          .step_by(step)
+          .find(|x| (x + t) % bus_id == 0)
+          .unwrap();
+        (sol, step * bus_id)
+      });
+    Ok(ans.to_string())
   }
 }
