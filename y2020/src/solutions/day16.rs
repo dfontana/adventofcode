@@ -64,8 +64,24 @@ impl Day for Solve {
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
-    println!("{:?}", self);
-    Ok("Impl".to_string())
+    Ok(
+      self
+        .other_tickets
+        .iter()
+        .fold(0, |acc, ticket| {
+          acc
+            + ticket
+              .iter()
+              .filter(|v| {
+                !self
+                  .rules
+                  .iter()
+                  .any(|rule| rule.lower.contains(v) || rule.upper.contains(v))
+              })
+              .sum::<u64>()
+        })
+        .to_string(),
+    )
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
