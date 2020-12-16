@@ -37,8 +37,8 @@ fn play_game(limit: usize, numbers: &Vec<usize>) -> usize {
     let next_spoken = ages[last_spoken];
     ages[last_spoken] = turn;
     last_spoken = match next_spoken {
-    0 => 0,
-    _ => turn - next_spoken
+      0 => 0,
+      _ => turn - next_spoken,
     };
   }
   last_spoken
