@@ -12,6 +12,9 @@ lazy_static! {
     Regex::new("^([a-zA-Z\\s]+): (\\d+)-(\\d+) or (\\d+)-(\\d+)$").unwrap();
 }
 
+// Part1: 29759
+// Part2: 1307550234719
+
 #[derive(Debug)]
 pub struct Solve {
   rules: Vec<Rule>,
@@ -45,10 +48,13 @@ impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
     let input = read_input(d)?;
     let mut sections = input.split("\n\n");
+    let (rules, mine, others) = (
+      sections.next().unwrap(),
+      sections.next().unwrap(),
+      sections.next().unwrap(),
+    );
     Ok(Solve {
-      rules: sections
-        .next()
-        .unwrap()
+      rules: rules
         .lines()
         .map(|l| {
           let caps = CAPTURE_RULE.captures(l).unwrap();
@@ -59,8 +65,8 @@ impl Day for Solve {
           }
         })
         .collect(),
-      my_ticket: read_ticket(sections.next().unwrap())[0].clone(),
-      other_tickets: read_ticket(sections.next().unwrap()),
+      my_ticket: read_ticket(mine)[0].clone(),
+      other_tickets: read_ticket(others),
     })
   }
 
@@ -69,18 +75,15 @@ impl Day for Solve {
       self
         .other_tickets
         .iter()
-        .fold(0, |acc, ticket| {
-          acc
-            + ticket
-              .iter()
-              .filter(|v| {
-                !self
-                  .rules
-                  .iter()
-                  .any(|rule| rule.lower.contains(v) || rule.upper.contains(v))
-              })
-              .sum::<u64>()
+        .map(|t| t.iter())
+        .flatten()
+        .filter(|v| {
+          !self
+            .rules
+            .iter()
+            .any(|rule| rule.lower.contains(v) || rule.upper.contains(v))
         })
+        .sum::<u64>()
         .to_string(),
     )
   }
@@ -90,16 +93,12 @@ impl Day for Solve {
       .other_tickets
       .iter()
       .filter(|ticket| {
-        ticket
-          .iter()
-          .filter(|v| {
-            !self
-              .rules
-              .iter()
-              .any(|rule| rule.lower.contains(v) || rule.upper.contains(v))
-          })
-          .next()
-          .is_none()
+        ticket.iter().all(|v| {
+          self
+            .rules
+            .iter()
+            .any(|rule| rule.lower.contains(v) || rule.upper.contains(v))
+        })
       })
       .map(|v| v.clone())
       .collect();
