@@ -12,9 +12,6 @@ lazy_static! {
     Regex::new("^([a-zA-Z\\s]+): (\\d+)-(\\d+) or (\\d+)-(\\d+)$").unwrap();
 }
 
-// Part1: 29759
-// Part2: 1307550234719
-
 #[derive(Debug)]
 pub struct Solve {
   rules: Vec<Rule>,
