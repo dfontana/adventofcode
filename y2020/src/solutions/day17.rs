@@ -48,13 +48,16 @@ impl Day for Solve {
         .lines()
         .enumerate()
         .map(|(y, l)| {
-          l.chars()
-            .enumerate()
-            .map(move |(x, c)| (x as i32, y as i32, Cell::from_str(&c.to_string())))
+          l.chars().enumerate().filter_map(move |(x, c)| {
+            match Cell::from_str(&c.to_string()).unwrap() {
+              Cell::ACTIVE => Some((x as i32, y as i32, Cell::ACTIVE)),
+              _ => None,
+            }
+          })
         })
         .flatten()
-        .fold(HashMap::new(), |mut acc, (x, y, may_cell)| {
-          acc.insert(Coord::new(x, y, 0), may_cell.unwrap());
+        .fold(HashMap::new(), |mut acc, (x, y, cell)| {
+          acc.insert(Coord::new(x, y, 0), cell);
           acc
         }),
     })
@@ -95,18 +98,13 @@ where
 {
   state
     .keys()
-    .filter_map(|coor| {
-      if state.get(coor).filter(|ce| **ce != Cell::ACTIVE).is_some() {
-        return None;
-      }
+    .map(|coor| {
       let mut nbs: Vec<Coord> = expand(coor);
       nbs.push(coor.clone());
-      Some(
-        nbs
-          .iter()
-          .map(|nc| map_cell(&expand, state, nc))
-          .collect::<Vec<(Coord, Cell)>>(),
-      )
+      nbs
+        .iter()
+        .filter_map(|nc| map_cell(&expand, state, nc))
+        .collect::<Vec<(Coord, Cell)>>()
     })
     .flatten()
     .fold(HashMap::new(), |mut acc, (coor, cell)| {
@@ -115,7 +113,7 @@ where
     })
 }
 
-fn map_cell<F>(expand: F, state: &HashMap<Coord, Cell>, coor: &Coord) -> (Coord, Cell)
+fn map_cell<F>(expand: F, state: &HashMap<Coord, Cell>, coor: &Coord) -> Option<(Coord, Cell)>
 where
   F: Fn(&Coord) -> Vec<Coord>,
 {
@@ -125,12 +123,11 @@ where
     .iter()
     .filter(|c| state.get(*c).filter(|ce| **ce == Cell::ACTIVE).is_some())
     .count();
-  let ans = match count {
-    2 | 3 if *cell == Cell::ACTIVE => (coor.clone(), Cell::ACTIVE),
-    3 if *cell == Cell::INACTIVE => (coor.clone(), Cell::ACTIVE),
-    _ => (coor.clone(), Cell::INACTIVE),
-  };
-  ans
+  match count {
+    2 | 3 if *cell == Cell::ACTIVE => Some((coor.clone(), Cell::ACTIVE)),
+    3 if *cell == Cell::INACTIVE => Some((coor.clone(), Cell::ACTIVE)),
+    _ => None,
+  }
 }
 
 fn expand_3d(coor: &Coord) -> Vec<Coord> {
