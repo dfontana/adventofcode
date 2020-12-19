@@ -2,7 +2,7 @@ use crate::day::{Day, DayArg};
 use crate::util::read_input;
 use std::error::Error;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum Token {
   Operator(Op),
   ExpStart,
@@ -10,7 +10,7 @@ enum Token {
   Val(i32),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum Op {
   Mul,
   Add,
@@ -42,6 +42,12 @@ impl Exp {
   }
 }
 
+impl Default for Exp {
+  fn default() -> Exp {
+    Exp{operator: Op::Identity, operands: Vec::new(), value: 0}
+  }
+}
+
 pub struct Solve {}
 
 impl Day for Solve {
@@ -49,11 +55,11 @@ impl Day for Solve {
     let inp: Vec<i32> = read_input(d)?
       .lines()
       .map(|l| {
-        let tokens = tokenize(l);
+        let mut tokens = tokenize(l);
         // TODO tokenizing works, but parsing does not
-        let expression = parse2(&tokens, &mut Vec::new(), Op::Identity);
+        let expression = parse4(&mut tokens);
         let result = evaluate(&expression);
-        println!("{:?}\n\n{:?}\n\n{:?}", tokens, expression, result);
+        println!("{:#?}\n\n{:?}", expression, result);
         result
       })
       .collect();
@@ -83,47 +89,69 @@ fn tokenize(inp: &str) -> Vec<Token> {
     .collect()
 }
 
-// fn parse(tokens: &Vec<Token>) -> Exp {
-//   let mut items = Vec::new();
-//   let mut operator = None;
-//   for token in tokens {
-//     match token {
-//       Token::ExpStart => items.push(parse(str[idx..])),
-//       Token::ExpEnd => break,
-//       Token::Val(v) => items.push(Exp::val(*v)),
-//       Token::Operator(op) => {
-//         let new_op = match operator {
-//           Some(o) => {
-//             let sub_exp = Exp::new(&items, o);
-//             items.clear();
-//             items.push(sub_exp);
-//             op
-//           },
-//           None => op
-//         };
-//         operator = Some(new_op.clone());
-//       },
-//     }
-//   }
-//   match operator {
-//     Some(o) => Exp::new(&items, o),
-//     None => unreachable!()
-//   }
-// }
+fn parse4(tokens: &[Token]) -> Exp {
+  if tokens.is_empty() {
+    return Exp::default();
+  }
+  if tokens[0] == Token::ExpStart {
+    println!("Panic ==== {:?}\n", tokens);
+    let end = tokens.iter().enumerate().find_map(|(idx, tk)| match tk {Token::ExpEnd => Some(idx), _ => None}).unwrap();
 
-fn parse2(tokens: &[Token], items: &mut Vec<Exp>, operator: Op) -> Exp {
-  if let Some((first, rest)) = tokens.split_first() {
-    match first {
-      Token::ExpStart => items.push(parse2(rest, &mut Vec::new(), Op::Identity)),
-      Token::Val(v) => items.push(Exp::val(*v)),
-      Token::Operator(op) => {
-        parse2(rest, &mut vec![Exp::new(&items, &operator)], op.clone());
+    println!("Sub >>>> {:?}\n", &tokens[1..end]);
+
+    let sub = parse4(&tokens[1..end]);
+
+    if let Some((first, rest)) = tokens[end+1..].split_first() {
+      println!("First - {:?} ::: Rest - {:?}\n", first, rest);
+      match first {
+        Token::Operator(op) => {
+          return Exp::new(&vec![sub, parse4(rest)], op)
+        },
+        _ => return sub,
       }
-      Token::ExpEnd => return Exp::new(items, &operator),
+    }
+    return sub;
+  }
+
+  let maybe = tokens.iter().enumerate().find_map(|(idx, tk)| match tk {Token::Operator(op) => Some((idx, op)), _ => None});
+  let (idx, op) = match maybe {
+    Some(v) => v,
+    None => return match tokens[0] {
+      Token::Val(v) => Exp::val(v),
+      _ => Exp::default(),
+    },
+  };
+  let (l, r) = tokens.split_at(idx);
+  Exp::new(&vec![parse4(l), parse4(&r[1..])], op)
+}
+
+fn parse3(mut tokens: &[Token]) -> Exp {
+  let mut operands = Vec::new();
+  let mut operator = None;
+  while let Some((first, rest)) = tokens.split_first() {
+    tokens = rest.clone();
+    match first {
+      Token::ExpStart => operands.push(parse3(&tokens)),
+      Token::Val(v) => operands.push(Exp::val(*v)),
+      Token::Operator(op) => {
+        match operator {
+          None => (),
+          Some(old_op) => {
+            let mut exp_new = Exp::default();
+            exp_new.operator = old_op;
+            exp_new.operands = operands.clone();
+            operands.clear();
+            operands.push(exp_new);
+          }
+        }
+        operator = Some(op.clone())
+      }
+      Token::ExpEnd => break,
     }
   }
-  return Exp::new(items, &operator);
+  return Exp::new(&operands, &operator.unwrap());
 }
+
 
 fn evaluate(exp: &Exp) -> i32 {
   match exp.operator {
