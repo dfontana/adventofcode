@@ -44,34 +44,73 @@ impl Exp {
 
 impl Default for Exp {
   fn default() -> Exp {
-    Exp{operator: Op::Identity, operands: Vec::new(), value: 0}
+    Exp {
+      operator: Op::Identity,
+      operands: Vec::new(),
+      value: 0,
+    }
   }
 }
 
-pub struct Solve {}
+pub struct Solve {
+  tokens: Vec<Vec<Token>>,
+}
 
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let inp: Vec<i32> = read_input(d)?
-      .lines()
-      .map(|l| {
-        let mut tokens = tokenize(l);
-        let expression = parse4(&mut tokens);
-        let result = evaluate(&expression);
-        // println!("{:#?}\n\n{:?}", expression, result);
-        println!("{} => {}", l, result);
-        result
-      })
-      .collect();
-    Ok(Solve {})
+    Ok(Solve {
+      tokens: read_input(d)?.lines().map(tokenize).collect(),
+    })
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let ans: i64 = self
+      .tokens
+      .iter()
+      .map(|tks| {
+        tks
+          .iter()
+          .rev()
+          .map(|tk| match tk {
+            Token::ExpStart => Token::ExpEnd,
+            Token::ExpEnd => Token::ExpStart,
+            _ => tk.clone(),
+          })
+          .collect::<Vec<Token>>()
+      })
+      .map(|tks| eval_expr_easy(&tks, 0).1)
+      .sum();
+    Ok(ans.to_string())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
     Ok("Impl".to_string())
+  }
+}
+
+fn eval_expr_easy(tokens: &[Token], i: usize) -> (usize, i64) {
+  let (i, lhs) = match tokens[i] {
+    Token::Val(n) => (i + 1, n as i64),
+    Token::ExpStart => eval_expr_easy(tokens, i + 1),
+    _ => panic!(format!("Malformed; got {:?} at left hand side", tokens[i])),
+  };
+  if i == tokens.len() {
+    return (i, lhs);
+  }
+  match tokens[i] {
+    Token::Operator(Op::Add) => {
+      let (i, rhs) = eval_expr_easy(tokens, i + 1);
+      (i, lhs + rhs)
+    }
+    Token::Operator(Op::Mul) => {
+      let (i, rhs) = eval_expr_easy(tokens, i + 1);
+      (i, lhs * rhs)
+    }
+    Token::ExpEnd => (i + 1, lhs),
+    _ => panic!(format!(
+      "Malformed; got {:?} after left hand side",
+      tokens[i]
+    )),
   }
 }
 
@@ -89,61 +128,95 @@ fn tokenize(inp: &str) -> Vec<Token> {
     .collect()
 }
 
-fn parse4(tokens: &[Token]) -> Exp {
-  if tokens.is_empty() {
-    return Exp::default();
+fn parse5(tokens: &[Token], idx: usize) -> (usize, Exp) {
+  let (mut i, mut left) = parse_add(tokens, idx);
+  while i < tokens.len() && tokens[i] == Token::Operator(Op::Mul) {
+    let next_group = parse_add(tokens, i + 1);
+    i = next_group.0;
+    left = Exp::new(&vec![left, next_group.1], &Op::Mul);
   }
-  if tokens[0] == Token::ExpStart {
-    println!("Panic ==== {:?}\n", tokens);
-    let (idx, paren) = tokens[1..]
-      .iter()
-      .enumerate()
-      .find_map(|(idx, tk)| match tk {Token::ExpEnd | Token::ExpStart => Some((idx, tk)), _ => None})
-      .unwrap();
+  (i, left)
+}
 
-    let sub = match paren {
-      Token::ExpEnd => {
-        println!("Sub >>>> {:?}\n", &tokens[1..idx+1]);
-        parse4(&tokens[1..idx+1])
-      },
-      Token::ExpStart => {
-        println!("Sub >>>> {:?}\n", &tokens[1..]);
-        return parse4(&tokens[1..])
-      },
-      _ => unreachable!(),
-    };
+fn parse_add(tokens: &[Token], idx: usize) -> (usize, Exp) {
+  let (mut i, mut left) = parse_val(tokens, idx);
+  while i < tokens.len() && tokens[i] == Token::Operator(Op::Add) {
+    let next_group = parse_val(tokens, i + 1);
+    i = next_group.0;
+    left = Exp::new(&vec![left, next_group.1], &Op::Add);
+  }
+  (i, left)
+}
 
-    println!("Sub <<<<\n");
-
-    if let Some((first, rest)) = tokens[idx+2..].split_first() {
-      println!("First - {:?} ::: Rest - {:?}\n", first, rest);
-      match first {
-        Token::Operator(op) => {
-          return Exp::new(&vec![sub, parse4(rest)], op)
-        },
-        _ => return sub,
+fn parse_val(tokens: &[Token], idx: usize) -> (usize, Exp) {
+  match tokens[idx] {
+    Token::Val(v) => (idx + 1, Exp::val(v)),
+    Token::ExpStart => {
+      let (i, val) = parse5(tokens, idx + 1);
+      match tokens[i] {
+        Token::ExpEnd => (idx + 1, val),
+        _ => panic!("Parser Error"),
       }
     }
-    return sub;
+    _ => panic!("Parser Error"),
   }
-
-  let maybe = tokens.iter().enumerate().find_map(|(idx, tk)| match tk {Token::Operator(op) => Some((idx, op)), _ => None});
-  let (idx, op) = match maybe {
-    Some(v) => v,
-    None => return match tokens[0] {
-      Token::Val(v) => Exp::val(v),
-      _ => Exp::default(),
-    },
-  };
-
-  let (l, r) = tokens.split_at(idx);
-  if !&r[1..].is_empty(){
-    println!("EVAL **** {:?} **** {:?}\n", l, &r[1..]);
-    return Exp::new(&vec![parse4(l), parse4(&r[1..])], op)
-  }
-  println!("VALUE $$$$ {:?}\n", l);
-  return parse4(l);
 }
+
+// fn parse4(tokens: &[Token]) -> Exp {
+//   if tokens.is_empty() {
+//     return Exp::default();
+//   }
+//   if tokens[0] == Token::ExpStart {
+//     println!("Panic ==== {:?}\n", tokens);
+//     let (idx, paren) = tokens[1..]
+//       .iter()
+//       .enumerate()
+//       .find_map(|(idx, tk)| match tk {Token::ExpEnd | Token::ExpStart => Some((idx, tk)), _ => None})
+//       .unwrap();
+
+//     let sub = match paren {
+//       Token::ExpEnd => {
+//         println!("Sub >>>> {:?}\n", &tokens[1..idx+1]);
+//         parse4(&tokens[1..idx+1])
+//       },
+//       Token::ExpStart => {
+//         println!("Sub >>>> {:?}\n", &tokens[1..]);
+//         return parse4(&tokens[1..])
+//       },
+//       _ => unreachable!(),
+//     };
+
+//     println!("Sub <<<<\n");
+
+//     if let Some((first, rest)) = tokens[idx+2..].split_first() {
+//       println!("First - {:?} ::: Rest - {:?}\n", first, rest);
+//       match first {
+//         Token::Operator(op) => {
+//           return Exp::new(&vec![sub, parse4(rest)], op)
+//         },
+//         _ => return sub,
+//       }
+//     }
+//     return sub;
+//   }
+
+//   let maybe = tokens.iter().enumerate().find_map(|(idx, tk)| match tk {Token::Operator(op) => Some((idx, op)), _ => None});
+//   let (idx, op) = match maybe {
+//     Some(v) => v,
+//     None => return match tokens[0] {
+//       Token::Val(v) => Exp::val(v),
+//       _ => Exp::default(),
+//     },
+//   };
+
+//   let (l, r) = tokens.split_at(idx);
+//   if !&r[1..].is_empty(){
+//     println!("EVAL **** {:?} **** {:?}\n", l, &r[1..]);
+//     return Exp::new(&vec![parse4(l), parse4(&r[1..])], op)
+//   }
+//   println!("VALUE $$$$ {:?}\n", l);
+//   return parse4(l);
+// }
 
 /*
 5 + (8 * 3 + 9 + 3 * 4 * 3)
