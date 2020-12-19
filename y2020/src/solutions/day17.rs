@@ -1,6 +1,10 @@
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
-use std::{collections::HashMap, error::Error, str::FromStr};
+use std::{
+  collections::{HashMap, HashSet},
+  error::Error,
+  str::FromStr,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Cell {
@@ -96,17 +100,19 @@ fn update_state<F>(state: &HashMap<Coord, Cell>, expand: F) -> HashMap<Coord, Ce
 where
   F: Fn(&Coord) -> Vec<Coord>,
 {
-  state
+  let items_to_check: HashSet<Coord> = state
     .keys()
     .map(|coor| {
       let mut nbs: Vec<Coord> = expand(coor);
       nbs.push(coor.clone());
       nbs
-        .iter()
-        .filter_map(|nc| map_cell(&expand, state, nc))
-        .collect::<Vec<(Coord, Cell)>>()
     })
     .flatten()
+    .collect();
+
+  items_to_check
+    .iter()
+    .filter_map(|nc| map_cell(&expand, state, nc))
     .fold(HashMap::new(), |mut acc, (coor, cell)| {
       acc.insert(coor, cell);
       acc
