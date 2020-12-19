@@ -13,11 +13,16 @@ struct Coord {
   x: i32,
   y: i32,
   z: i32,
+  w: i32,
 }
 
 impl Coord {
   pub fn new(x: i32, y: i32, z: i32) -> Coord {
-    Coord { x, y, z }
+    Coord { x, y, z, w: 0 }
+  }
+
+  pub fn new4d(x: i32, y: i32, z: i32, w: i32) -> Coord {
+    Coord { x, y, z, w }
   }
 }
 
@@ -57,10 +62,8 @@ impl Day for Solve {
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
     let mut state = self.state.clone();
-    print_state(&state);
     for _ in 0..6 {
-      state = update_state(&state);
-      print_state(&state);
+      state = update_state(&state, expand_3d);
     }
     Ok(
       state
@@ -72,20 +75,38 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let mut state = self.state.clone();
+    for _ in 0..6 {
+      state = update_state(&state, expand_4d);
+    }
+    Ok(
+      state
+        .values()
+        .filter(|c| **c == Cell::ACTIVE)
+        .count()
+        .to_string(),
+    )
   }
 }
 
-fn update_state(state: &HashMap<Coord, Cell>) -> HashMap<Coord, Cell> {
+fn update_state<F>(state: &HashMap<Coord, Cell>, expand: F) -> HashMap<Coord, Cell>
+where
+  F: Fn(&Coord) -> Vec<Coord>,
+{
   state
     .keys()
-    .map(|coor| {
-      let mut nbs: Vec<Coord> = expand_3d(coor);
+    .filter_map(|coor| {
+      if state.get(coor).filter(|ce| **ce != Cell::ACTIVE).is_some() {
+        return None;
+      }
+      let mut nbs: Vec<Coord> = expand(coor);
       nbs.push(coor.clone());
-      nbs
-        .iter()
-        .map(|nc| map_cell(state, nc))
-        .collect::<Vec<(Coord, Cell)>>()
+      Some(
+        nbs
+          .iter()
+          .map(|nc| map_cell(&expand, state, nc))
+          .collect::<Vec<(Coord, Cell)>>(),
+      )
     })
     .flatten()
     .fold(HashMap::new(), |mut acc, (coor, cell)| {
@@ -94,16 +115,16 @@ fn update_state(state: &HashMap<Coord, Cell>) -> HashMap<Coord, Cell> {
     })
 }
 
-fn map_cell(state: &HashMap<Coord, Cell>, coor: &Coord) -> (Coord, Cell) {
-  let nbs: Vec<Coord> = expand_3d(coor);
+fn map_cell<F>(expand: F, state: &HashMap<Coord, Cell>, coor: &Coord) -> (Coord, Cell)
+where
+  F: Fn(&Coord) -> Vec<Coord>,
+{
+  let nbs: Vec<Coord> = expand(coor);
   let cell = state.get(&coor).unwrap_or(&Cell::INACTIVE);
   let count = nbs
     .iter()
     .filter(|c| state.get(*c).filter(|ce| **ce == Cell::ACTIVE).is_some())
     .count();
-  // if *coor == Coord::new(0,2,0) {
-  //   println!("{:?}", nbs.iter().map(|n| ((n.x, n.y, n.z), state.get(n).unwrap_or(&Cell::INACTIVE))).collect::<Vec<((i32,i32,i32), &Cell)>>());
-  // }
   let ans = match count {
     2 | 3 if *cell == Cell::ACTIVE => (coor.clone(), Cell::ACTIVE),
     3 if *cell == Cell::INACTIVE => (coor.clone(), Cell::ACTIVE),
@@ -128,28 +149,20 @@ fn expand_3d(coor: &Coord) -> Vec<Coord> {
   nbs
 }
 
-fn print_state(state: &HashMap<Coord, Cell>) {
-  // println!("STEP");
-  // for x in -7..7i32 {
-  //   print!("{}", x.abs());
-  // }
-  // println!();
-  // for z in -1..2 {
-  //   for y in -7..7 {
-  //     for x in -7..7 {
-  //       let c = match state.get(&Coord::new(x,y,z)) {
-  //         Some(c) => {
-  //           match c {
-  //             Cell::ACTIVE => "#",
-  //             Cell::INACTIVE => "."
-  //           }
-  //         },
-  //         _ => "."
-  //       };
-  //       print!("{}", c);
-  //     }
-  //     print!("{}\n", y);
-  //   }
-  //   print!("\n\n");
-  // }
+fn expand_4d(coor: &Coord) -> Vec<Coord> {
+  let mut nbs = Vec::new();
+  for x in coor.x - 1..coor.x + 2 {
+    for y in coor.y - 1..coor.y + 2 {
+      for z in coor.z - 1..coor.z + 2 {
+        for w in coor.w - 1..coor.w + 2 {
+          let c = Coord::new4d(x, y, z, w);
+          if c == *coor {
+            continue;
+          }
+          nbs.push(c);
+        }
+      }
+    }
+  }
+  nbs
 }
