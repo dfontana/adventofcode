@@ -34,19 +34,14 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    let mut ans = 0;
-    let new_8 = "42 | 42 8";
-    let new_11 = "42 31 | 42 11 31";
+    let (mut ans, mut nxt) = (0, 1);
     let mut reps = 1;
-    loop {
+    while ans != nxt {
+      ans = nxt;
       let mut rules = self.rules.clone();
-      rules.insert("8".to_owned(), replace_n(reps, new_8, "8"));
-      rules.insert("11".to_owned(), replace_n(reps, new_11, "11"));
-      let new_ans = solve(&rules, &self.messages);
-      if ans == new_ans {
-        break;
-      }
-      ans = new_ans;
+      rules.insert("8".to_owned(), replace_n(reps, "42 | 42 8", "8"));
+      rules.insert("11".to_owned(), replace_n(reps, "42 31 | 42 11 31", "11"));
+      nxt = solve(&rules, &self.messages);
       reps += 1;
     }
     Ok(ans.to_string())
@@ -54,13 +49,9 @@ impl Day for Solve {
 }
 
 fn replace_n(times: u8, rule: &str, key: &str) -> String {
-  let mut res = rule.to_owned();
-  for _ in 0..times {
-    res = res.replace(key, rule)
-  }
-  let rm_key = " ".to_owned() + &key;
-  res = res.replacen(&rm_key, "", 1);
-  res
+  (0..times)
+    .fold(rule.to_owned(), |acc, _| acc.replace(key, rule))
+    .replacen(&(" ".to_owned() + &key), "", 1)
 }
 
 fn solve(rules: &Rules, messages: &Vec<String>) -> usize {
@@ -70,24 +61,21 @@ fn solve(rules: &Rules, messages: &Vec<String>) -> usize {
 }
 
 fn expand(rules: &Rules, rule: String) -> String {
-  let tokens = rules
-    .get(&rule)
-    .unwrap_or_else(|| panic!("no such rule {}", rule));
-  if !tokens.chars().next().unwrap().is_alphabetic() {
-    let re = tokens
-      .split(" | ")
-      .map(|branch| {
-        format!(
-          "{}|",
+  let tokens = rules.get(&rule).unwrap();
+  match tokens.chars().next().unwrap().is_alphabetic() {
+    true => tokens.to_owned(),
+    false => {
+      let re = tokens
+        .split(" | ")
+        .map(|branch| {
           branch
-            .split(' ')
+            .split_whitespace()
             .map(|rule| expand(&rules, rule.to_owned()))
             .collect::<String>()
-        )
-      })
-      .collect::<String>();
-    format!("({})", &re[..re.len() - 1])
-  } else {
-    tokens.to_owned()
+            + "|"
+        })
+        .collect::<String>();
+      format!("({})", &re[..re.len() - 1])
+    }
   }
 }
