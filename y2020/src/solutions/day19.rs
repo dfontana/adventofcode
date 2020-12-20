@@ -3,10 +3,9 @@ use crate::util::read_input;
 use std::{collections::HashMap, error::Error};
 
 #[derive(Debug)]
-struct Rule {
-  id: i32,
-  chr: String,
-  groups: Vec<Vec<i32>>,
+enum Rule {
+  Char(String),
+  Groups(Vec<Vec<i32>>),
 }
 
 pub struct Solve {
@@ -24,8 +23,8 @@ impl Day for Solve {
         .unwrap()
         .lines()
         .map(parse_rule)
-        .fold(HashMap::new(), |mut acc, r| {
-          acc.insert(r.id, r);
+        .fold(HashMap::new(), |mut acc, (id, r)| {
+          acc.insert(id, r);
           acc
         }),
       messages: groups.next().unwrap().lines().map(str::to_owned).collect(),
@@ -33,7 +32,17 @@ impl Day for Solve {
   }
 
   fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let ans = self.messages
+      .iter()
+      .filter(|s| {
+        if let Some(v) = matches_rule(&0, &self.rules, &s) {
+          v.len() == 0
+        } else {
+          false
+        }
+      })
+      .count();
+    Ok(ans.to_string())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
@@ -41,7 +50,41 @@ impl Day for Solve {
   }
 }
 
-fn parse_rule(l: &str) -> Rule {
+fn matches_rule(id: &i32, rules: &HashMap<i32, Rule>, input: &String) -> Option<String> {
+  if input.len() == 0 {
+    return None;
+  }
+  match rules.get(id).unwrap() {
+    Rule::Char(value) => {
+      if input[0..1] == *value {
+        return Some(input[1..].to_owned());
+      } else {
+        return None;
+      }
+    }
+    Rule::Groups(choices) => {
+      for sequence in choices {
+        let mut current = input.to_owned();
+        let mut valid = true;
+        for id2 in sequence {
+          match matches_rule(id2, rules, &current) {
+            Some(v) => current = v,
+            None => {
+              valid = false;
+              break;
+            }
+          }
+        }
+        if valid {
+          return Some(current.to_owned());
+        }
+      }
+      return None;
+    }
+  }
+}
+
+fn parse_rule(l: &str) -> (i32, Rule) {
   let mut i = 0;
   let mut in_id = true;
   let mut in_char = false;
@@ -110,10 +153,8 @@ fn parse_rule(l: &str) -> Rule {
     group.push(grp_item.parse::<i32>().unwrap());
     groups.push(group);
   }
-
-  Rule {
-    groups,
-    chr,
-    id: id.parse::<i32>().unwrap(),
+  match chr.is_empty() {
+    true => (id.parse::<i32>().unwrap(), Rule::Char(chr)),
+    false => (id.parse::<i32>().unwrap(), Rule::Groups(groups))
   }
 }
