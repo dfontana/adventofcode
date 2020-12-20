@@ -1,7 +1,7 @@
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
 use regex::Regex;
-use std::{collections::HashMap, error::Error, str::Lines};
+use std::{collections::HashMap, error::Error};
 
 type Rules = HashMap<String, String>;
 
@@ -34,8 +34,33 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let mut ans = 0;
+    let new_8 = "42 | 42 8";
+    let new_11 = "42 31 | 42 11 31";
+    let mut reps = 1;
+    loop {
+      let mut rules = self.rules.clone();
+      rules.insert("8".to_owned(), replace_n(reps, new_8, "8"));
+      rules.insert("11".to_owned(), replace_n(reps, new_11, "11"));
+      let new_ans = solve(&rules, &self.messages);
+      if ans == new_ans {
+        break;
+      }
+      ans = new_ans;
+      reps += 1;
+    }
+    Ok(ans.to_string())
   }
+}
+
+fn replace_n(times: u8, rule: &str, key: &str) -> String {
+  let mut res = rule.to_owned();
+  for _ in 0..times {
+    res = res.replace(key, rule)
+  }
+  let rm_key = " ".to_owned() + &key;
+  res = res.replacen(&rm_key, "", 1);
+  res
 }
 
 fn solve(rules: &Rules, messages: &Vec<String>) -> usize {
