@@ -29,27 +29,33 @@ enum State {
 
 pub struct Solve {
   tiles: Vec<Tile>,
+  side_len: usize,
 }
 
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
+    let tiles = read_input(d)?
+      .split("\n\n")
+      .map(|t| {
+        let mut lines = t.lines();
+        let id: usize = lines
+          .next()
+          .unwrap()
+          .trim_start_matches("Tile ")
+          .trim_end_matches(':')
+          .parse()
+          .unwrap();
+        let img = lines.map(str::to_owned).collect();
+        Tile { img, id: (id, 0) }
+      })
+      .collect::<Vec<_>>();
     Ok(Solve {
-      tiles: read_input(d)?
-        .split("\n\n")
-        .map(|t| {
-          let mut lines = t.lines();
-          let id: usize = lines
-            .next()
-            .unwrap()
-            .trim_start_matches("Tile ")
-            .trim_end_matches(':')
-            .parse()
-            .unwrap();
-          let img = lines.map(str::to_owned).collect();
-          get_all_orientations(&img, id)
-        })
+      tiles: tiles
+        .iter()
+        .map(|t| get_all_orientations(&t.img, t.id.0))
         .flatten()
         .collect(),
+      side_len: (tiles.len() as f64).sqrt() as usize,
     })
   }
 
@@ -59,15 +65,21 @@ impl Day for Solve {
       acc.insert(t.id, t.clone());
       acc
     });
-    let s = match explore(root, &images) {
+    let s = match explore(root, &images, self.side_len) {
       Some(s) => s,
       None => return Err("No ans found".into()),
     };
-    let upper_l: &Tile = images.get(&traverse(&s, |s| s.u, |s| s.l)).unwrap();
-    let upper_r: &Tile = images.get(&traverse(&s, |s| s.u, |s| s.r)).unwrap();
-    let lower_l: &Tile = images.get(&traverse(&s, |s| s.d, |s| s.l)).unwrap();
-    let lower_r: &Tile = images.get(&traverse(&s, |s| s.d, |s| s.r)).unwrap();
-    Ok((upper_l.id.0 * upper_r.id.0 * lower_l.id.0 * lower_r.id.0).to_string())
+    let upper_l = images.get(&traverse(&s, |s| s.u.to_owned(), |s| s.l.to_owned()));
+    let upper_r = images.get(&traverse(&s, |s| s.u.to_owned(), |s| s.r.to_owned()));
+    let lower_l = images.get(&traverse(&s, |s| s.d.to_owned(), |s| s.l.to_owned()));
+    let lower_r = images.get(&traverse(&s, |s| s.d.to_owned(), |s| s.r.to_owned()));
+    Ok(
+      (upper_l.unwrap().id.0
+        * upper_r.unwrap().id.0
+        * lower_l.unwrap().id.0
+        * lower_r.unwrap().id.0)
+        .to_string(),
+    )
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
@@ -87,14 +99,14 @@ impl Stitch {
   }
 }
 
-fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>) -> Option<Stitch> {
+fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>, side_len: usize) -> Option<Stitch> {
   let mut ans: Option<Stitch> = None;
   let mut frontier: VecDeque<Stitch> = VecDeque::new();
   frontier.push_back(Stitch::empty(root));
   while let Some(next) = frontier.pop_front() {
     // Check if any unseen images can fit onto next.
     // Enqueue them for exploration
-    match expand(&next, &images) {
+    match expand(&next, &images, side_len) {
       // No images left for next, all got used
       // and it's a square
       State::Finished => {
@@ -114,16 +126,32 @@ fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>) -> Option<Stitch> {
   ans
 }
 
-fn expand(s: &Stitch, bank: &HashMap<IdOrient, Tile>) -> State {
+fn expand(s: &Stitch, bank: &HashMap<IdOrient, Tile>, side_len: usize) -> State {
+  /*
+   * Only include those in the response that:
+   * - Can fit
+   * - In all places it fits
+   *   - So long as it still meets the square's size
+   *
+   * If no fits: Dead
+   * If nothing left in the bank (all seen): Finished.
+   */
   todo!()
 }
 
 fn traverse<F, S>(root: &Stitch, t1: F, t2: S) -> IdOrient
 where
-  F: Fn(Stitch) -> Option<Box<Stitch>>,
-  S: Fn(Stitch) -> Option<Box<Stitch>>,
+  F: Fn(&Stitch) -> Option<Box<Stitch>>,
+  S: Fn(&Stitch) -> Option<Box<Stitch>>,
 {
-  todo!()
+  let mut node = root.to_owned();
+  while let Some(next) = t1(&node) {
+    node = next.as_ref().to_owned();
+  }
+  while let Some(next) = t2(&node) {
+    node = next.as_ref().to_owned();
+  }
+  node.id
 }
 
 fn flip_x(img: &Img) -> Img {
