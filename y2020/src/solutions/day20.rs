@@ -1,6 +1,6 @@
 use crate::day::{Day, DayArg};
 use crate::util::read_input;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 
 type Img = Vec<String>;
@@ -65,21 +65,12 @@ impl Day for Solve {
       acc.insert(t.id, t.clone());
       acc
     });
-    let s = match explore(root, &images, self.side_len) {
+    let s = match explore(root, &images) {
       Some(s) => s,
       None => return Err("No ans found".into()),
     };
-    let upper_l = images.get(&traverse(&s, |s| s.u.to_owned(), |s| s.l.to_owned()));
-    let upper_r = images.get(&traverse(&s, |s| s.u.to_owned(), |s| s.r.to_owned()));
-    let lower_l = images.get(&traverse(&s, |s| s.d.to_owned(), |s| s.l.to_owned()));
-    let lower_r = images.get(&traverse(&s, |s| s.d.to_owned(), |s| s.r.to_owned()));
-    Ok(
-      (upper_l.unwrap().id.0
-        * upper_r.unwrap().id.0
-        * lower_l.unwrap().id.0
-        * lower_r.unwrap().id.0)
-        .to_string(),
-    )
+    s.print();
+    Ok("Use Printout :P".to_string())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
@@ -97,16 +88,71 @@ impl Stitch {
       d: None,
     }
   }
+
+  fn apply<F>(&self, mut fnc: F)
+  where
+    F: FnMut(&Stitch),
+  {
+    let mut ptr = self;
+    loop {
+      if let Some(n) = &ptr.l {
+        ptr = n.as_ref();
+        fnc(ptr);
+        continue;
+      }
+      if let Some(n) = &ptr.r {
+        ptr = n.as_ref();
+        fnc(ptr);
+        continue;
+      }
+      if let Some(n) = &ptr.u {
+        ptr = n.as_ref();
+        fnc(ptr);
+        continue;
+      }
+      if let Some(n) = &ptr.d {
+        ptr = n.as_ref();
+        fnc(ptr);
+        continue;
+      }
+      break;
+    }
+  }
+
+  fn all_in_path(&self) -> Vec<IdOrient> {
+    let mut path = Vec::new();
+    self.apply(|ptr| path.push(ptr.id));
+    path
+  }
+
+  fn print(&self) {
+    self.apply(|ptr| {
+      print!("\n[ID] {} - ", ptr.id.0);
+      if let Some(n) = &ptr.l {
+        print!("U:{} ", n.id.0);
+      }
+      if let Some(n) = &ptr.r {
+        print!("U:{} ", n.id.0);
+      }
+      if let Some(n) = &ptr.u {
+        print!("U:{} ", n.id.0);
+      }
+      if let Some(n) = &ptr.d {
+        print!("U:{} ", n.id.0);
+      }
+      println!();
+    });
+  }
 }
 
-fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>, side_len: usize) -> Option<Stitch> {
+fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>) -> Option<Stitch> {
   let mut ans: Option<Stitch> = None;
   let mut frontier: VecDeque<Stitch> = VecDeque::new();
   frontier.push_back(Stitch::empty(root));
   while let Some(next) = frontier.pop_front() {
     // Check if any unseen images can fit onto next.
     // Enqueue them for exploration
-    match expand(&next, &images, side_len) {
+    match expand(&next, &images) {
       // No images left for next, all got used
       // and it's a square
       State::Finished => {
@@ -126,40 +172,125 @@ fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>, side_len: usize) ->
   ans
 }
 
-fn expand(s: &Stitch, bank: &HashMap<IdOrient, Tile>, side_len: usize) -> State {
-  /*
-   * Only include those in the response that:
-   * - Can fit
-   * - In all places it fits
-   *   - So long as it still meets the square's size
-   *
-   * If no fits: Dead
-   * If nothing left in the bank (all seen): Finished.
-   */
-  todo!()
+fn expand(s: &Stitch, bank: &HashMap<IdOrient, Tile>) -> State {
+  let seen: Vec<IdOrient> = s.all_in_path();
+
+  // Finished check
+  let possible: HashSet<usize> = bank.keys().map(|(id, _)| *id).collect();
+  let seen_id: HashSet<usize> = seen.iter().map(|(id, _)| *id).collect();
+  if seen_id.len() == possible.len() {
+    return State::Finished;
+  }
+
+  // Fit checks
+  let mut fits: Vec<Stitch> = Vec::new();
+  let unseen: Vec<IdOrient> = bank
+    .keys()
+    .filter(|(id, _)| !seen_id.contains(id))
+    .map(|t| t.to_owned())
+    .collect();
+  for o in unseen {
+    let t = bank.get(&o).unwrap();
+    if let Some(me) = &s.l {
+      if fits_left(bank.get(&me.id).unwrap(), t) {
+        fits.push(Stitch {
+          id: o,
+          r: Some(me.to_owned()),
+          l: None,
+          d: None,
+          u: None,
+        });
+      }
+    }
+    if let Some(me) = &s.r {
+      if fits_right(bank.get(&me.id).unwrap(), t) {
+        fits.push(Stitch {
+          id: o,
+          l: Some(me.to_owned()),
+          r: None,
+          d: None,
+          u: None,
+        });
+      }
+    }
+    if let Some(me) = &s.u {
+      if fits_up(bank.get(&me.id).unwrap(), t) {
+        fits.push(Stitch {
+          id: o,
+          d: Some(me.to_owned()),
+          l: None,
+          r: None,
+          u: None,
+        });
+      }
+    }
+    if let Some(me) = &s.d {
+      if fits_down(bank.get(&me.id).unwrap(), t) {
+        fits.push(Stitch {
+          id: o,
+          u: Some(me.to_owned()),
+          l: None,
+          d: None,
+          r: None,
+        });
+      }
+    }
+  }
+
+  match fits.is_empty() {
+    true => State::Dead,
+    false => State::Explore(fits),
+  }
 }
 
-fn traverse<F, S>(root: &Stitch, t1: F, t2: S) -> IdOrient
-where
-  F: Fn(&Stitch) -> Option<Box<Stitch>>,
-  S: Fn(&Stitch) -> Option<Box<Stitch>>,
-{
-  let mut node = root.to_owned();
-  while let Some(next) = t1(&node) {
-    node = next.as_ref().to_owned();
-  }
-  while let Some(next) = t2(&node) {
-    node = next.as_ref().to_owned();
-  }
-  node.id
+fn fits_left(t1: &Tile, t2: &Tile) -> bool {
+  let right = t2
+    .img
+    .iter()
+    .map(|s| s.chars().last().unwrap())
+    .collect::<String>();
+  let left = t1
+    .img
+    .iter()
+    .map(|s| s.chars().nth(0).unwrap())
+    .collect::<String>();
+  right == left
+}
+
+fn fits_right(t1: &Tile, t2: &Tile) -> bool {
+  let right = t1
+    .img
+    .iter()
+    .map(|s| s.chars().last().unwrap())
+    .collect::<String>();
+  let left = t2
+    .img
+    .iter()
+    .map(|s| s.chars().nth(0).unwrap())
+    .collect::<String>();
+  right == left
+}
+
+fn fits_up(t1: &Tile, t2: &Tile) -> bool {
+  t1.img[t1.img.len() - 1] == t2.img[0]
+}
+
+fn fits_down(t1: &Tile, t2: &Tile) -> bool {
+  t1.img[0] == t2.img[t2.img.len() - 1]
 }
 
 fn flip_x(img: &Img) -> Img {
-  todo!()
+  img.iter().map(|s| s.chars().rev().collect::<String>()).collect()
 }
 
 fn rot_r(img: &Img) -> Img {
-  todo!()
+  let mut new_img: Vec<Vec<char>> = vec![Vec::new(); img.len()];
+  img.iter().rev().enumerate().for_each(|(idx,l)| {
+    l.chars().for_each(|ch| {
+      new_img.get_mut(idx).unwrap().push(ch);
+    })
+  });
+  new_img.iter().map(|chs| chs.iter().collect::<String>()).collect()
 }
 
 fn get_all_orientations(img: &Img, id: usize) -> Vec<Tile> {
