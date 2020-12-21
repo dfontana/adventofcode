@@ -12,7 +12,7 @@ struct Tile {
   img: Img,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Stitch {
   id: IdOrient,
   l: Option<Box<Stitch>>,
@@ -150,6 +150,7 @@ fn explore(root: IdOrient, images: &HashMap<IdOrient, Tile>) -> Option<Stitch> {
   let mut frontier: VecDeque<Stitch> = VecDeque::new();
   frontier.push_back(Stitch::empty(root));
   while let Some(next) = frontier.pop_front() {
+    println!("F: {:?}", frontier.iter().map(|s| s.id).collect::<Vec<_>>());
     // Check if any unseen images can fit onto next.
     // Enqueue them for exploration
     match expand(&next, &images) {
@@ -189,46 +190,47 @@ fn expand(s: &Stitch, bank: &HashMap<IdOrient, Tile>) -> State {
     .filter(|(id, _)| !seen_id.contains(id))
     .map(|t| t.to_owned())
     .collect();
+  let me = bank.get(&s.id).unwrap();
   for o in unseen {
     let t = bank.get(&o).unwrap();
-    if let Some(me) = &s.l {
-      if fits_left(bank.get(&me.id).unwrap(), t) {
+    if let None = &s.l {
+      if fits_left(me, t) {
         fits.push(Stitch {
           id: o,
-          r: Some(me.to_owned()),
+          r: Some(Box::new(s.to_owned())),
           l: None,
           d: None,
           u: None,
         });
       }
     }
-    if let Some(me) = &s.r {
-      if fits_right(bank.get(&me.id).unwrap(), t) {
+    if let None = &s.r {
+      if fits_right(me, t) {
         fits.push(Stitch {
           id: o,
-          l: Some(me.to_owned()),
+          l: Some(Box::new(s.to_owned())),
           r: None,
           d: None,
           u: None,
         });
       }
     }
-    if let Some(me) = &s.u {
-      if fits_up(bank.get(&me.id).unwrap(), t) {
+    if let None = &s.u {
+      if fits_up(me, t) {
         fits.push(Stitch {
           id: o,
-          d: Some(me.to_owned()),
+          d: Some(Box::new(s.to_owned())),
           l: None,
           r: None,
           u: None,
         });
       }
     }
-    if let Some(me) = &s.d {
-      if fits_down(bank.get(&me.id).unwrap(), t) {
+    if let None = &s.d {
+      if fits_down(me, t) {
         fits.push(Stitch {
           id: o,
-          u: Some(me.to_owned()),
+          u: Some(Box::new(s.to_owned())),
           l: None,
           d: None,
           r: None,
@@ -254,6 +256,7 @@ fn fits_left(t1: &Tile, t2: &Tile) -> bool {
     .iter()
     .map(|s| s.chars().nth(0).unwrap())
     .collect::<String>();
+  // println!("LF {} == {}", right, left);
   right == left
 }
 
@@ -268,14 +271,17 @@ fn fits_right(t1: &Tile, t2: &Tile) -> bool {
     .iter()
     .map(|s| s.chars().nth(0).unwrap())
     .collect::<String>();
+  // println!("RF {} == {}", right, left);
   right == left
 }
 
 fn fits_up(t1: &Tile, t2: &Tile) -> bool {
+  // println!("UF {} == {}", t1.img[t1.img.len() - 1], t2.img[0]);
   t1.img[t1.img.len() - 1] == t2.img[0]
 }
 
 fn fits_down(t1: &Tile, t2: &Tile) -> bool {
+  // println!("DF {} == {}", t1.img[0], t2.img[t2.img.len() - 1]);
   t1.img[0] == t2.img[t2.img.len() - 1]
 }
 
