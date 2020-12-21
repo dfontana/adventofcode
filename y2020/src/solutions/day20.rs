@@ -11,38 +11,40 @@ struct Tile {
   img: Img,
 }
 
-impl Default for Tile {
+pub struct Solve {
+  grid: Vec<Vec<Tile>>,
+  sides: usize,
+}
+
+impl Tile {
   fn default() -> Tile {
     Tile {
       id: 0usize,
       img: Vec::new(),
     }
   }
-}
 
-pub struct Solve {
-  tiles: Vec<(usize, Img)>,
+  fn new(id: usize, img: Img) -> Tile {
+    Tile { id, img }
+  }
 }
 
 impl Day for Solve {
   fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      tiles: read_input(d)?
-        .split("\n\n")
-        .map(|t| {
-          let mut lines = t.lines();
-          let id_line = lines.next().unwrap();
-          (
-            id_line["Tile ".len()..id_line.len() - 1].parse().unwrap(),
-            lines.map(str::to_owned).collect(),
-          )
-        })
-        .collect(),
-    })
-  }
+    let tiles = read_input(d)?
+      .split("\n\n")
+      .map(|t| {
+        let mut lines = t.lines();
+        let id_line = lines.next().unwrap();
+        Tile::new(
+          id_line["Tile ".len()..id_line.len() - 1].parse().unwrap(),
+          lines.map(str::to_owned).collect(),
+        )
+      })
+      .collect::<Vec<_>>();
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    let sides = (self.tiles.len() as f64).sqrt() as usize;
+    let sides = (tiles.len() as f64).sqrt() as usize;
+
     let mut grid = Vec::new();
     for _ in 0..sides {
       let mut row = Vec::new();
@@ -51,27 +53,53 @@ impl Day for Solve {
       }
       grid.push(row);
     }
-    let tiles = self.tiles.iter().fold(HashMap::new(), |mut acc, (k, v)| {
-      acc.insert(*k, v.clone());
+
+    let unseen = tiles.iter().fold(HashMap::new(), |mut acc, tile| {
+      acc.insert(tile.id, tile.img.clone());
       acc
     });
-    if on_tile(&mut grid, &tiles, 0, 0, sides) {
-      let checksum = grid[0][0].id
-        * grid[0][sides - 1].id
-        * grid[sides - 1][0].id
-        * grid[sides - 1][sides - 1].id;
-      return Ok(checksum.to_string());
+
+    if !insert_tile(&mut grid, &unseen, 0, 0, sides) {
+      return Err("Failed to build image".into());
     }
 
-    Err("No solve".into())
+    Ok(Solve { grid, sides })
+  }
+
+  fn p1(&self) -> Result<String, Box<dyn Error>> {
+    let checksum = self.grid[0][0].id
+      * self.grid[0][self.sides - 1].id
+      * self.grid[self.sides - 1][0].id
+      * self.grid[self.sides - 1][self.sides - 1].id;
+    Ok(checksum.to_string())
   }
 
   fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok("Impl".to_string())
+    let tile_size = self.grid[0][0].img.len();
+    let mut img = Vec::new();
+    for r in 0..self.sides {
+      for img_r in 1..tile_size - 1 {
+        let mut row = Vec::new();
+        for c in 0..self.sides {
+          row.push(self.grid[r][c].img[img_r][1..tile_size - 1].to_owned());
+        }
+        img.push(row.concat());
+      }
+    }
+
+    let monsters = scan_image(&img);
+    Ok(
+      (img
+        .iter()
+        .map(|v| v.chars().filter(|c| *c == '#').count())
+        .sum::<usize>()
+        - monsters * 15)
+        .to_string(),
+    )
   }
 }
 
-fn on_tile(
+fn insert_tile(
   grid: &mut Vec<Vec<Tile>>,
   remaining: &HashMap<usize, Img>,
   row: usize,
@@ -94,25 +122,22 @@ fn on_tile(
       id: *id,
       img: gr.clone(),
     };
-
     let mut remaining = remaining.clone();
     remaining.remove(id);
 
     for _ in 0..4 {
       grid[row][col].img = rot_l(&grid[row][col].img);
-      if is_matching(grid, row, col) {
-        if on_tile(grid, &remaining, nr, nc, sides) {
+      if tile_fits(grid, row, col) {
+        if insert_tile(grid, &remaining, nr, nc, sides) {
           return true;
         }
       }
     }
-
     grid[row][col].img = flip_x(&grid[row][col].img);
-
     for _ in 0..4 {
       grid[row][col].img = rot_l(&grid[row][col].img);
-      if is_matching(grid, row, col) {
-        if on_tile(grid, &remaining, nr, nc, sides) {
+      if tile_fits(grid, row, col) {
+        if insert_tile(grid, &remaining, nr, nc, sides) {
           return true;
         }
       }
@@ -121,7 +146,7 @@ fn on_tile(
   false
 }
 
-fn is_matching(grid: &Vec<Vec<Tile>>, row: usize, col: usize) -> bool {
+fn tile_fits(grid: &Vec<Vec<Tile>>, row: usize, col: usize) -> bool {
   let tile = &grid[row][col].img;
 
   if row > 0 {
@@ -141,6 +166,57 @@ fn is_matching(grid: &Vec<Vec<Tile>>, row: usize, col: usize) -> bool {
   }
 
   true
+}
+
+const MONSTER_H: usize = 3;
+const MONSTER_W: usize = 20;
+const MONSTER: [&str; 3] = [
+  "                  # ",
+  "#    ##    ##    ###",
+  " #  #  #  #  #  #   ",
+];
+
+fn scan_image(input: &Img) -> usize {
+  let mut test = input.clone();
+  for _ in 0..4 {
+    test = rot_l(&test);
+    if let Some(ct) = count_monsters(&test) {
+      return ct;
+    }
+  }
+  test = flip_x(&test);
+  for _ in 0..4 {
+    test = rot_l(&test);
+    if let Some(ct) = count_monsters(&test) {
+      return ct;
+    }
+  }
+  0
+}
+
+fn count_monsters(img: &Img) -> Option<usize> {
+  let height = img.len();
+  let width = img[0].len();
+  let mut count = 0;
+  for r in 0..=height - MONSTER_H {
+    for c in 0..=width - MONSTER_W {
+      let matched = MONSTER.iter().enumerate().all(|(i, mask)| {
+        mask
+          .chars()
+          .zip(img[r + i][c..c + MONSTER_W].chars())
+          .filter(|(m, i)| *m == '#' && m != i)
+          .count()
+          == 0
+      });
+      if matched {
+        count += 1;
+      }
+    }
+  }
+  match count {
+    0 => None,
+    v => Some(v),
+  }
 }
 
 fn flip_x(img: &Img) -> Img {
