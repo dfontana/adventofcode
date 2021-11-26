@@ -1,0 +1,13 @@
+[package]
+name = "y2021"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dotenv = "0.15.0"
+itertools = "0.10.1"
+lazy_static = "1.4.0"
+regex = "1.5.4"
+rust-util = {path = "../rust-util"}

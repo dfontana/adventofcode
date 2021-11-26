@@ -1,7 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 use std::collections::HashSet;
 use std::error::Error;
+use std::fmt::Display;
 use std::str::FromStr;
 
 pub struct Solve {
@@ -44,25 +44,28 @@ impl FromStr for Instruction {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      tape: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      tape: read_input(2020, d)?
         .lines()
         .map(Instruction::from_str)
         .flatten()
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     match run_tape(&self.tape) {
-      Terminate::LOOP(amt) => Ok(amt.to_string()),
+      Terminate::LOOP(amt) => Ok(Box::new(amt.to_string())),
       _ => Err("No loop found".into()),
     }
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
-    self
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    let ans = self
       .tape
       .repeat(self.tape.len())
       .chunks_mut(self.tape.len())
@@ -77,13 +80,16 @@ impl Day for Solve {
         vec![(idx, chunk[idx], chunk.to_owned()), (idx, alt[idx], alt)]
       })
       .map(|(idx, ins, t)| (idx, ins, run_tape(&t.to_vec())))
-      .filter_map(|(idx, ins, res)| match res {
+      .find_map(|(idx, ins, res)| match res {
         Terminate::NORMAL(amt) => Some((idx, ins, amt)),
         _ => None,
       })
-      .next()
       .map(|(idx, ins, acc)| format!("Acc {} - INS {} to {:?}", acc, idx, ins))
-      .ok_or("Did not find normal termination".into())
+      .ok_or("Did not find normal termination".into());
+    match ans {
+      Ok(v) => Ok(Box::new(v)),
+      Err(e) => Err(e),
+    }
   }
 }
 

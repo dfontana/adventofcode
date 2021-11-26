@@ -1,6 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
-use std::{error::Error, str::FromStr};
+use rust_util::{read_input, AocDay, Day};
+use std::error::Error;
+use std::fmt::Display;
+use std::str::FromStr;
 
 pub struct Solve {
   tiles: Vec<Tile>,
@@ -29,10 +30,13 @@ impl FromStr for Tile {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let input = read_input(d)?;
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let input = read_input(2020, d)?;
     let width = input.lines().next().map(str::len).unwrap();
-    Ok(Solve {
+    Ok(Box::new(Solve {
       tiles: input
         .lines()
         .map(|l| l.split("").map(Tile::from_str))
@@ -40,17 +44,21 @@ impl Day for Solve {
         .flatten()
         .collect(),
       width,
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let tile_update = update_tile(4, find_adjacent);
-    Ok(run_sim(&self.tiles, self.width, &tile_update).to_string())
+    Ok(Box::new(
+      run_sim(&self.tiles, self.width, &tile_update).to_string(),
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let tile_update = update_tile(5, find_first_non_floor);
-    Ok(run_sim(&self.tiles, self.width, &tile_update).to_string())
+    Ok(Box::new(
+      run_sim(&self.tiles, self.width, &tile_update).to_string(),
+    ))
   }
 }
 

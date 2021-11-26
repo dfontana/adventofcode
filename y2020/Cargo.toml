@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 dotenv = "0.15.0"
-reqwest = {version = "0.10.9", features = ["blocking", "gzip", "cookies"] }
 regex = "1"
 lazy_static = "1.4.0"
+rust-util = {path = "../rust-util"}

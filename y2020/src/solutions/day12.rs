@@ -1,6 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
-use std::{error::Error, str::FromStr};
+use rust_util::{read_input, AocDay, Day};
+use std::error::Error;
+use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -48,17 +49,20 @@ impl FromStr for Action {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      actions: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      actions: read_input(2020, d)?
         .lines()
         .map(Action::from_str)
         .flatten()
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut dir = Direction::East;
     let (mut x, mut y) = (0, 0);
     for act in self.actions.iter() {
@@ -89,10 +93,10 @@ impl Day for Solve {
         Action::W(amt) => x -= amt,
       }
     }
-    Ok((x.abs() + y.abs()).to_string())
+    Ok(Box::new((x.abs() + y.abs()).to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let (mut ship_x, mut ship_y) = (0, 0);
     let (mut wp_x, mut wp_y) = (10, 1);
     for act in self.actions.iter() {
@@ -117,7 +121,7 @@ impl Day for Solve {
         Action::W(amt) => wp_x -= amt,
       }
     }
-    Ok((ship_x.abs() + ship_y.abs()).to_string())
+    Ok(Box::new((ship_x.abs() + ship_y.abs()).to_string()))
   }
 }
 

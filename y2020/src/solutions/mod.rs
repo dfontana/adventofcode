@@ -19,32 +19,23 @@ mod day7;
 mod day8;
 mod day9;
 
-use crate::day::{Day, DayArg};
-
-use std::error::Error;
-
-pub fn get_runner(d: DayArg) -> Result<Box<dyn Day>, Box<dyn Error>> {
-  match d {
-    DayArg::D(1) => day1::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(2) => day2::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(3) => day3::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(4) => day4::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(5) => day5::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(6) => day6::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(7) => day7::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(8) => day8::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(9) => day9::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(10) => day10::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(11) => day11::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(12) => day12::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(13) => day13::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(14) => day14::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(15) => day15::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(16) => day16::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(17) => day17::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(18) => day18::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(19) => day19::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(20) => day20::Solve::new(d).map(|s| Box::new(s) as Box<dyn Day>),
-    DayArg::D(n) => Err(format!("Unknown Day Given: {}", n).into()),
-  }
-}
+pub use day1::Solve as Day1;
+pub use day10::Solve as Day10;
+pub use day11::Solve as Day11;
+pub use day12::Solve as Day12;
+pub use day13::Solve as Day13;
+pub use day14::Solve as Day14;
+pub use day15::Solve as Day15;
+pub use day16::Solve as Day16;
+pub use day17::Solve as Day17;
+pub use day18::Solve as Day18;
+pub use day19::Solve as Day19;
+pub use day2::Solve as Day2;
+pub use day20::Solve as Day20;
+pub use day3::Solve as Day3;
+pub use day4::Solve as Day4;
+pub use day5::Solve as Day5;
+pub use day6::Solve as Day6;
+pub use day7::Solve as Day7;
+pub use day8::Solve as Day8;
+pub use day9::Solve as Day9;

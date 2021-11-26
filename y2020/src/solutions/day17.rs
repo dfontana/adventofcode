@@ -1,8 +1,8 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 use std::{
   collections::{HashMap, HashSet},
   error::Error,
+  fmt::Display,
   str::FromStr,
 };
 
@@ -46,9 +46,12 @@ pub struct Solve {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      state: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      state: read_input(2020, d)?
         .lines()
         .enumerate()
         .map(|(y, l)| {
@@ -64,35 +67,35 @@ impl Day for Solve {
           acc.insert(Coord::new(x, y, 0), cell);
           acc
         }),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut state = self.state.clone();
     for _ in 0..6 {
       state = update_state(&state, expand_3d);
     }
-    Ok(
+    Ok(Box::new(
       state
         .values()
         .filter(|c| **c == Cell::ACTIVE)
         .count()
         .to_string(),
-    )
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut state = self.state.clone();
     for _ in 0..6 {
       state = update_state(&state, expand_4d);
     }
-    Ok(
+    Ok(Box::new(
       state
         .values()
         .filter(|c| **c == Cell::ACTIVE)
         .count()
         .to_string(),
-    )
+    ))
   }
 }
 

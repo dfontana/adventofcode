@@ -1,7 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::Display;
 
 pub struct Solve {
   program: Vec<Op>,
@@ -31,9 +31,12 @@ impl Mask {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      program: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      program: read_input(2020, d)?
         .lines()
         .map(|inp| {
           let mut split = inp.splitn(2, " = ");
@@ -52,25 +55,25 @@ impl Day for Solve {
           op
         })
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       run_program(&self.program, |mask, adr, val, mem| {
         mem.insert(adr, val & mask.ones | mask.zero);
       })
       .to_string(),
-    )
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       run_program(&self.program, |mask, adr, val, mut mem| {
         update_memory(mask.flow, adr | mask.zero, val, &mut mem)
       })
       .to_string(),
-    )
+    ))
   }
 }
 
