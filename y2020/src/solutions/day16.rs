@@ -2,9 +2,9 @@ extern crate regex;
 use regex::Captures;
 use regex::Regex;
 
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
 use core::panic;
+use rust_util::{read_input, AocDay, Day};
+use std::fmt::Display;
 use std::{collections::HashSet, error::Error, ops::RangeInclusive};
 
 lazy_static! {
@@ -42,15 +42,18 @@ fn read_ticket(inp: &str) -> Vec<Vec<u64>> {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let input = read_input(d)?;
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let input = read_input(2020, d)?;
     let mut sections = input.split("\n\n");
     let (rules, mine, others) = (
       sections.next().unwrap(),
       sections.next().unwrap(),
       sections.next().unwrap(),
     );
-    Ok(Solve {
+    Ok(Box::new(Solve {
       rules: rules
         .lines()
         .map(|l| {
@@ -64,11 +67,11 @@ impl Day for Solve {
         .collect(),
       my_ticket: read_ticket(mine)[0].clone(),
       other_tickets: read_ticket(others),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       self
         .other_tickets
         .iter()
@@ -82,10 +85,10 @@ impl Day for Solve {
         })
         .sum::<u64>()
         .to_string(),
-    )
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut valid_tickets: Vec<Vec<u64>> = self
       .other_tickets
       .iter()
@@ -154,6 +157,6 @@ impl Day for Solve {
       .map(|(_, i)| self.my_ticket[*i])
       .product::<u64>();
 
-    Ok(ans.to_string())
+    Ok(Box::new(ans.to_string()))
   }
 }

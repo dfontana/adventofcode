@@ -1,7 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::Display;
 
 type Img = Vec<String>;
 
@@ -30,8 +30,11 @@ impl Tile {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let tiles = read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let tiles = read_input(2020, d)?
       .split("\n\n")
       .map(|t| {
         let mut lines = t.lines();
@@ -63,18 +66,18 @@ impl Day for Solve {
       return Err("Failed to build image".into());
     }
 
-    Ok(Solve { grid, sides })
+    Ok(Box::new(Solve { grid, sides }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let checksum = self.grid[0][0].id
       * self.grid[0][self.sides - 1].id
       * self.grid[self.sides - 1][0].id
       * self.grid[self.sides - 1][self.sides - 1].id;
-    Ok(checksum.to_string())
+    Ok(Box::new(checksum.to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let tile_size = self.grid[0][0].img.len();
     let mut img = Vec::new();
     for r in 0..self.sides {
@@ -88,14 +91,14 @@ impl Day for Solve {
     }
 
     let monsters = scan_image(&img);
-    Ok(
+    Ok(Box::new(
       (img
         .iter()
         .map(|v| v.chars().filter(|c| *c == '#').count())
         .sum::<usize>()
         - monsters * 15)
         .to_string(),
-    )
+    ))
   }
 }
 

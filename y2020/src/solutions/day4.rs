@@ -1,11 +1,11 @@
 extern crate regex;
 use regex::Regex;
 
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::Display;
 use std::ops::RangeInclusive;
 
 const REQUIRED_KEYS: [&str; 7] = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"];
@@ -25,9 +25,12 @@ pub struct Solve {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      passports: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      passports: read_input(2020, d)?
         .split("\n\n")
         .map(|passport| {
           passport
@@ -38,22 +41,22 @@ impl Day for Solve {
             .collect()
         })
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       self
         .passports
         .iter()
         .filter(has_required_fields)
         .count()
         .to_string(),
-    )
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       self
         .passports
         .iter()
@@ -61,7 +64,7 @@ impl Day for Solve {
         .filter(has_valid_fields)
         .count()
         .to_string(),
-    )
+    ))
   }
 }
 

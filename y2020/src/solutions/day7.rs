@@ -1,7 +1,7 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 use std::collections::HashSet;
 use std::error::Error;
+use std::fmt::Display;
 
 // A graph might be better suited to this problem, but modeling
 // that in rust is surprisingly non-trivial. TIL.
@@ -22,9 +22,12 @@ struct Formula {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      formulas: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      formulas: read_input(2020, d)?
         .lines()
         .map(|l| {
           let mut lr = l.split("contain");
@@ -43,10 +46,10 @@ impl Day for Solve {
           }
         })
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut result: HashSet<String> = HashSet::new();
     let mut frontier: Vec<String> = vec!["shiny gold".to_string()];
     while !frontier.is_empty() {
@@ -61,10 +64,10 @@ impl Day for Solve {
         }
       }
     }
-    Ok(result.len().to_string())
+    Ok(Box::new(result.len().to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let shiny_form = match self.formulas.iter().find(|f| f.result.name == "shiny gold") {
       None => return Err("Couldn't find shiny gold formula".into()),
       Some(form) => form,
@@ -91,7 +94,11 @@ impl Day for Solve {
       }
       result += 1;
     }
-    Ok(result.to_string())
+    Ok(Box::new(result.to_string()))
+  }
+
+  fn run(&self) -> Result<String, Box<dyn Error>> {
+    Ok(format!("Part1: {}\nPart2: {}", self.p1()?, self.p2()?))
   }
 }
 

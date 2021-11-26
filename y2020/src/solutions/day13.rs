@@ -1,6 +1,5 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
-use std::error::Error;
+use rust_util::{read_input, AocDay, Day};
+use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   target: usize,
@@ -8,10 +7,13 @@ pub struct Solve {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let inp = read_input(d)?;
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let inp = read_input(2020, d)?;
     let mut lines = inp.lines();
-    Ok(Solve {
+    Ok(Box::new(Solve {
       target: lines.next().map(|i| i.parse::<usize>()).unwrap()?,
       buses: lines
         .next()
@@ -23,10 +25,10 @@ impl Day for Solve {
             .collect()
         })
         .unwrap(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let ans = self
       .buses
       .iter()
@@ -34,10 +36,10 @@ impl Day for Solve {
       .min_by(|a, b| a.1.cmp(&b.1))
       .map(|(bus_id, time)| bus_id * (time - self.target))
       .unwrap();
-    Ok(ans.to_string())
+    Ok(Box::new(ans.to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     // Can't claim this one as mine :/ Not a numberphile, so the concept of
     // Chinese Remainder Theorem is new to me
     let (ans, _) = self
@@ -54,6 +56,6 @@ impl Day for Solve {
           .unwrap();
         (sol, step * bus_id)
       });
-    Ok(ans.to_string())
+    Ok(Box::new(ans.to_string()))
   }
 }

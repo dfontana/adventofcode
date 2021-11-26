@@ -1,7 +1,6 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
 use regex::Regex;
-use std::{collections::HashMap, error::Error};
+use rust_util::{read_input, AocDay, Day};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 type Rules = HashMap<String, String>;
 
@@ -11,10 +10,13 @@ pub struct Solve {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let inp = read_input(d)?;
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let inp = read_input(2020, d)?;
     let mut groups = inp.split("\n\n");
-    Ok(Solve {
+    Ok(Box::new(Solve {
       rules: groups
         .next()
         .unwrap()
@@ -26,14 +28,14 @@ impl Day for Solve {
           acc
         }),
       messages: groups.next().unwrap().lines().map(str::to_owned).collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(solve(&self.rules, &self.messages).to_string())
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(solve(&self.rules, &self.messages).to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let (mut ans, mut nxt) = (0, 1);
     let mut reps = 1;
     while ans != nxt {
@@ -44,7 +46,7 @@ impl Day for Solve {
       nxt = solve(&rules, &self.messages);
       reps += 1;
     }
-    Ok(ans.to_string())
+    Ok(Box::new(ans.to_string()))
   }
 }
 

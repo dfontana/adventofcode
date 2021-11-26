@@ -1,7 +1,6 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
+use rust_util::{read_input, AocDay, Day};
 
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   input: Vec<PasswordEntry>,
@@ -40,13 +39,16 @@ fn split_bounds(bounds: &str) -> Result<(usize, usize), Box<dyn Error>> {
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    let input: Vec<PasswordEntry> = read_input(d)?.lines().map(parse_line).collect();
-    Ok(Solve { input })
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    let input: Vec<PasswordEntry> = read_input(2020, d)?.lines().map(parse_line).collect();
+    Ok(Box::new(Solve { input }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       self
         .input
         .iter()
@@ -56,11 +58,11 @@ impl Day for Solve {
         })
         .count()
         .to_string(),
-    )
+    ))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok(
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(
       self
         .input
         .iter()
@@ -76,6 +78,6 @@ impl Day for Solve {
         })
         .count()
         .to_string(),
-    )
+    ))
   }
 }

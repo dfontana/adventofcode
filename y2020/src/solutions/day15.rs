@@ -1,28 +1,30 @@
-use crate::day::{Day, DayArg};
-use crate::util::read_input;
-use std::error::Error;
+use rust_util::{read_input, AocDay, Day};
+use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   numbers: Vec<usize>,
 }
 
 impl Day for Solve {
-  fn new(d: DayArg) -> Result<Solve, Box<dyn Error>> {
-    Ok(Solve {
-      numbers: read_input(d)?
+  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
+  where
+    Self: Sized,
+  {
+    Ok(Box::new(Solve {
+      numbers: read_input(2020, d)?
         .split(',')
         .map(|c| c.parse::<usize>())
         .flatten()
         .collect(),
-    })
+    }))
   }
 
-  fn p1(&self) -> Result<String, Box<dyn Error>> {
-    Ok(play_game(2020, &self.numbers).to_string())
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(play_game(2020, &self.numbers).to_string()))
   }
 
-  fn p2(&self) -> Result<String, Box<dyn Error>> {
-    Ok(play_game(30000000, &self.numbers).to_string())
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    Ok(Box::new(play_game(30000000, &self.numbers).to_string()))
   }
 }
 
