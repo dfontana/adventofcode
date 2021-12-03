@@ -1278,7 +1278,6 @@ version = "0.1.0"
 dependencies = [
  "dotenv",
  "itertools",
- "lazy_static",
  "regex",
  "rust-util",
 ]

@@ -26,7 +26,15 @@ pub trait Day {
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>>;
 
   fn run(&self) -> Result<String, Box<dyn Error>> {
-    Ok(format!("Part1: {}\nPart2: {}", self.p1()?, self.p2()?))
+    let mut ans = match self.p1() {
+      Ok(v) => format!("Part 1: {}", v),
+      Err(e) => format!("Part 1: {:?}", e)
+    };
+    ans = match self.p2() {
+      Ok(v) => format!("{}\nPart 2: {}", ans, v),
+      Err(e) => format!("{}\nPart 2: {:?}", ans, e)
+    };
+    Ok(ans.into())
   }
 }
 
