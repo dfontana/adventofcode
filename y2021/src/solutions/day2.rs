@@ -21,13 +21,11 @@ impl Day for Solve {
       .lines()
       .map(|l| l.splitn(2, " ").collect_tuple().unwrap())
       .map(|(dir, amt)| (dir, amt.parse::<i32>().unwrap()))
-      .fold((0, 0), |(x, y), (dir, amt)| {
-        match dir {
-            "forward" => (x + amt, y),
-            "down" => (x, y + amt),
-            "up" => (x, y - amt),
-            _ => unreachable!("Invalid direction"),
-        }
+      .fold((0, 0), |(x, y), (dir, amt)| match dir {
+        "forward" => (x + amt, y),
+        "down" => (x, y + amt),
+        "up" => (x, y - amt),
+        _ => unreachable!("Invalid direction"),
       });
 
     Ok(Box::new(x * y))
@@ -39,13 +37,11 @@ impl Day for Solve {
       .lines()
       .map(|l| l.splitn(2, " ").collect_tuple().unwrap())
       .map(|(dir, amt)| (dir, amt.parse::<i32>().unwrap()))
-      .fold((0, 0, 0), |(aim, x, y), (dir, amt)| {
-        match dir {
-            "forward" => (aim, x + amt, y + (aim * amt)),
-            "down" => (aim + amt, x, y),
-            "up" => (aim - amt, x, y),
-            _ => unreachable!("Invalid direction"),
-        }
+      .fold((0, 0, 0), |(aim, x, y), (dir, amt)| match dir {
+        "forward" => (aim, x + amt, y + (aim * amt)),
+        "down" => (aim + amt, x, y),
+        "up" => (aim - amt, x, y),
+        _ => unreachable!("Invalid direction"),
       });
 
     Ok(Box::new(x * y))

@@ -12,24 +12,32 @@ impl Day for Solve {
     Self: Sized,
   {
     let input = rust_util::read_input(2021, d)?;
-    Ok(Box::new(Solve {input}))
+    Ok(Box::new(Solve { input }))
   }
 
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(self.input.lines()
-      .filter_map(|n| n.parse::<usize>().ok())
-      .tuple_windows()
-      .filter(|(a, b)| b > a)
-      .count()))
+    Ok(Box::new(
+      self
+        .input
+        .lines()
+        .filter_map(|n| n.parse::<usize>().ok())
+        .tuple_windows()
+        .filter(|(a, b)| b > a)
+        .count(),
+    ))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(self.input.lines()
-      .filter_map(|n| n.parse::<usize>().ok())
-      .tuple_windows::<(_,_,_)>()
-      .map(|t| t.0 + t.1 + t.2)
-      .tuple_windows()
-      .filter(|(a, b)| b > a)
-      .count()))  
+    Ok(Box::new(
+      self
+        .input
+        .lines()
+        .filter_map(|n| n.parse::<usize>().ok())
+        .tuple_windows::<(_, _, _)>()
+        .map(|t| t.0 + t.1 + t.2)
+        .tuple_windows()
+        .filter(|(a, b)| b > a)
+        .count(),
+    ))
   }
-} 
+}
