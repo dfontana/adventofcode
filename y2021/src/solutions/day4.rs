@@ -123,7 +123,6 @@ impl Day for Solve {
           continue;
         }
         board.call(call);
-        boards_in_play.insert(board.id);
         if let Some(board) = board.maybe_bingo() {
           if boards_in_play.len() == 1 {
             return Ok(Box::new(board.score(call)));
