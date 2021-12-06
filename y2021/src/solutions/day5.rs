@@ -1,5 +1,5 @@
 use rust_util::{AocDay, Day};
-use std::{collections::HashMap, error::Error, fmt::Display, slice::Iter};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 pub struct Solve {
   segments: Vec<Segment>,
