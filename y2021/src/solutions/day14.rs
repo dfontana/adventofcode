@@ -10,6 +10,7 @@ type Template = HashMap<Polymer, Aggregate>;
 
 pub struct Solve {
   template: Template,
+  ends: (Element, Element),
   rules: Vec<PairRule>,
 }
 
@@ -20,6 +21,7 @@ impl Day for Solve {
   {
     let mut template: Template = HashMap::new();
     let mut rules: Vec<PairRule> = Vec::new();
+    let mut ends: (Element, Element) = (' ', ' ');
 
     let input = rust_util::read_input(2021, d)?;
     let mut onto_transforms = false;
@@ -36,6 +38,10 @@ impl Day for Solve {
           trs.next().and_then(|s| s.chars().nth(0)).unwrap(),
         ));
       } else {
+        ends = (
+          line.chars().nth(0).unwrap(),
+          line.chars().nth(line.len()-1).unwrap(),
+        );
         template =
           line
             .chars()
@@ -54,38 +60,37 @@ impl Day for Solve {
             });
       }
     }
-    Ok(Box::new(Solve { template, rules }))
+    Ok(Box::new(Solve { template, ends, rules }))
   }
 
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let (min, max) = expand(&self.template, &self.rules, 10);
+    let (min, max) = expand(&self.template, &self.rules, &self.ends, 10);
     Ok(Box::new(max - min))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let (min, max) = expand(&self.template, &self.rules, 40);
+    let (min, max) = expand(&self.template, &self.rules, &self.ends, 40);
     Ok(Box::new(max - min))
   }
 }
 
-// There's a bug in here somewhere; if the ends of the starting template
-// are the same, we over count that character by 1. If they differ, then 
-// we under count it by 0.5. I'm not quite sure why...  
-fn expand(base: &Template, rules: &Vec<PairRule>, steps: usize) -> (f64, f64) {
+fn expand(base: &Template, rules: &Vec<PairRule>, ends: &(Element, Element), steps: usize) -> (f64, f64) {
   let template = (0..steps).fold(base.clone(), |acc, _| apply(&acc, &rules));
-  let summed = template
+  let mut summed = template
     .iter()
     .fold(HashMap::new(), |mut acc, ((a, b), (_, aw, bw))| {
       acc.entry(a).and_modify(|v| *v += *aw).or_insert(*aw);
       acc.entry(b).and_modify(|v| *v += *bw).or_insert(*bw);
       acc
     });
+  // Rectify we only treated the ends as worth 0.5 instead of 1.
+  summed.entry(&ends.0).and_modify(|v| *v += 0.5);
+  summed.entry(&ends.1).and_modify(|v| *v += 0.5);
   let minmax = summed.iter().minmax_by_key(|f| f.1);
   let (min, max) = match minmax {
     MinMaxResult::MinMax(min, max) => (min, max),
     _ => unreachable!(),
   };
-  println!("{:?}-{:?}", max, min);
   (*min.1, *max.1)
 }
 
