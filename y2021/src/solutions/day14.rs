@@ -40,7 +40,7 @@ impl Day for Solve {
       } else {
         ends = (
           line.chars().nth(0).unwrap(),
-          line.chars().nth(line.len()-1).unwrap(),
+          line.chars().nth(line.len() - 1).unwrap(),
         );
         template =
           line
@@ -60,7 +60,11 @@ impl Day for Solve {
             });
       }
     }
-    Ok(Box::new(Solve { template, ends, rules }))
+    Ok(Box::new(Solve {
+      template,
+      ends,
+      rules,
+    }))
   }
 
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
@@ -74,7 +78,12 @@ impl Day for Solve {
   }
 }
 
-fn expand(base: &Template, rules: &Vec<PairRule>, ends: &(Element, Element), steps: usize) -> (f64, f64) {
+fn expand(
+  base: &Template,
+  rules: &Vec<PairRule>,
+  ends: &(Element, Element),
+  steps: usize,
+) -> (f64, f64) {
   let template = (0..steps).fold(base.clone(), |acc, _| apply(&acc, &rules));
   let mut summed = template
     .iter()
