@@ -5,7 +5,7 @@ pub struct Solve {
   tape: String,
 }
 
-// This one got me... 
+// This one got me...
 // Adapted from https://github.com/jeffomatic/adventofcode/tree/main/2021-rust/day16b
 // The iterators were a clever solve, rather than trying to manipulate bit vectors
 
