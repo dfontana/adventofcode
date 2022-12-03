@@ -55,14 +55,12 @@ impl Day for Solve {
       .pairs
       .iter()
       .map(|(l, outcome)| match outcome.as_str() {
-        "X" => {
-          0 + match l.as_str() {
-            "A" => 3,
-            "B" => 1,
-            "C" => 2,
-            _ => unreachable!(),
-          }
-        }
+        "X" => match l.as_str() {
+          "A" => 3,
+          "B" => 1,
+          "C" => 2,
+          _ => unreachable!(),
+        },
         "Y" => {
           3 + match l.as_str() {
             "A" => 1,

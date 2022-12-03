@@ -26,6 +26,7 @@ fn get_runner(day: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>> {
   match day {
     AocDay::D(01) => Day1::new(day),
     AocDay::D(02) => Day2::new(day),
+    AocDay::D(03) => Day3::new(day),
     _ => Err("Unknown day given".into()),
   }
 }
