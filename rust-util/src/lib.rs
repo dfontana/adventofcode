@@ -6,21 +6,21 @@ use std::{env, fmt::Display};
 use reqwest::{blocking::Client, header};
 
 pub enum AocDay {
-  D(usize),
+  D(usize, usize),
 }
 
 impl Display for AocDay {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
-      AocDay::D(v) => write!(f, "{}", v),
+      AocDay::D(year, day) => write!(f, "{}/day/{}", year, day),
     }
   }
 }
 
-pub trait Day {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized;
+pub trait Day: TryFrom<String, Error = Box<dyn std::error::Error>> {
+  fn new(d: AocDay) -> Result<Self, Box<dyn Error>> {
+      Self::try_from(read_input(d)?)
+  }
 
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>>;
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>>;
@@ -34,19 +34,19 @@ pub trait Day {
       Ok(v) => format!("{}\nPart 2: {}", ans, v),
       Err(e) => format!("{}\nPart 2: {:?}", ans, e)
     };
-    Ok(ans.into())
+    Ok(ans)
   }
 }
 
-pub fn read_input(year: usize, day: AocDay) -> Result<String, Box<dyn Error>> {
+fn read_input(day: AocDay) -> Result<String, Box<dyn Error>> {
   let path = match day {
-    AocDay::D(v @ 1..=25) => PathBuf::from(format!("./input/d{}", v)),
-    AocDay::D(_) => return Err("Unknown Day Provided".into()),
+    AocDay::D(_, v @ 1..=25) => PathBuf::from(format!("./input/d{}", v)),
+    AocDay::D(_, _) => return Err("Unknown Day Provided".into()),
   };
 
   if !path.exists() {
     println!("Attempting input download...");
-    download_input(year, day, &path)?;
+    download_input(day, &path)?;
   }
 
   match fs::read_to_string(path) {
@@ -55,9 +55,9 @@ pub fn read_input(year: usize, day: AocDay) -> Result<String, Box<dyn Error>> {
   }
 }
 
-fn download_input(year: usize, day: AocDay, out: &PathBuf) -> Result<(), Box<dyn Error>> {
+fn download_input(day: AocDay, out: &PathBuf) -> Result<(), Box<dyn Error>> {
   let session = env::var("AOC_SESSION")?;
-  let dl_url = format!("https://adventofcode.com/{}/day/{}/input", year, day);
+  let dl_url = format!("https://adventofcode.com/{}/input", day);
   let client = Client::builder().gzip(true).build()?;
   let mut response = client
     .get(&dl_url)
