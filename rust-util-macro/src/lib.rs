@@ -43,7 +43,7 @@ fn find_solution_filenames(
 ) -> Result<Vec<(usize, String, String)>, Box<dyn std::error::Error>> {
     let mut results: Vec<(usize, String, String)> = Vec::new();
     // TODO: eventually let this support year and such organization
-    let expression = Regex::new("(day([0-9]))+.rs")?;
+    let expression = Regex::new("(day([0-9]+)).rs")?;
     for entry in std::fs::read_dir(full_path)? {
         let entry = entry?;
         let path = entry.path();

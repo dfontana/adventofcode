@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display, thread, time::Duration};
 
 pub struct Solve {
@@ -17,12 +17,11 @@ const NEIGHBORS: [(isize, isize); 8] = [
   (1, 0),
 ];
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let mut octo = rust_util::read_input(2021, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    let mut octo = value 
       .lines()
       .map(|l| l.chars().map(|c| c.to_digit(10).unwrap()).collect())
       .collect();
@@ -43,12 +42,15 @@ impl Day for Solve {
       }
     }
 
-    Ok(Box::new(Solve {
+    Ok(Solve {
       p1: flashes,
       p2: cstep,
-    }))
+    })
   }
+}
 
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(self.p1))
   }

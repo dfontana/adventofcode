@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 pub struct Solve {
@@ -8,13 +8,12 @@ pub struct Solve {
 type Point = (i32, i32);
 type Segment = (Point, Point);
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      segments: rust_util::read_input(2021, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      segments: value 
         .lines()
         .map(|l| {
           l.split_once(" -> ")
@@ -22,9 +21,11 @@ impl Day for Solve {
             .unwrap()
         })
         .collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(count_overlaps(
       self

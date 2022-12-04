@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display, ops::RangeInclusive};
 
 pub struct Solve {
@@ -6,12 +6,11 @@ pub struct Solve {
   hits: usize,
 }
 
-impl Day for Solve {
-  fn new(_d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    // This one is just easier to enter rather than parse lol
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(_value: String) -> Result<Self, Self::Error> {
+        // This one is just easier to enter rather than parse lol
     let target = Target {
       xrange: to_range(209, 238),
       yrange: to_range(-86, -59),
@@ -37,9 +36,12 @@ impl Day for Solve {
       }
     }
 
-    Ok(Box::new(Solve { max, hits }))
+    Ok(Solve{max, hits })
   }
+}
 
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(format!("{} {:?}", self.max.0, self.max.1)))
   }

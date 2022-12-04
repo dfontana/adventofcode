@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 type Digit = u32;
@@ -8,12 +8,10 @@ pub struct Solve {
   items: Vec<(Vec<Digit>, Vec<Digit>)>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let items = input
       .lines()
       .map(|l| {
@@ -28,9 +26,11 @@ impl Day for Solve {
         (pair.next().unwrap(), pair.next().unwrap())
       })
       .collect();
-    Ok(Box::new(Solve { items }))
+    Ok(Solve { items })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       self

@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 type Coord = (usize, usize);
@@ -16,13 +16,10 @@ pub struct Solve {
   folds: Vec<Fold>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let mut paper = HashMap::new();
     let mut folds = Vec::new();
 
@@ -49,9 +46,11 @@ impl Day for Solve {
         });
       }
     }
-    Ok(Box::new(Solve { paper, folds }))
+    Ok(Solve { paper, folds })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(fold_paper(&self.paper, &self.folds[0..1]).len()))
   }

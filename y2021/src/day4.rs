@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{
   collections::{HashMap, HashSet},
   error::Error,
@@ -74,17 +74,15 @@ impl Board {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let mut lines = input.lines();
     let calls = lines
       .next()
       .unwrap()
-      .split(",")
+      .split(',')
       .map(|f| f.parse::<u32>().unwrap())
       .collect();
     let mut boards = Vec::new();
@@ -93,9 +91,11 @@ impl Day for Solve {
       boards.push(Board::from(&ls.join(" "), id));
       id += 1;
     }
-    Ok(Box::new(Solve { calls, boards }))
+    Ok(Solve { calls, boards })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     self
       .calls

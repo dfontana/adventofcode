@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{
   cmp::Ordering,
   collections::{BinaryHeap, HashMap},
@@ -35,12 +35,10 @@ pub struct Solve {
   height: usize,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let mut tile: HashMap<Coord, usize> = HashMap::new();
     let (mut width, mut height) = (0, 0);
     for (y, line) in input.lines().enumerate() {
@@ -51,13 +49,15 @@ impl Day for Solve {
       height = y + 1;
     }
 
-    Ok(Box::new(Solve {
+    Ok(Solve {
       tile,
       width,
       height,
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let (nodes, goal) = build_map(&self.tile, self.width, self.height, 1);
     match find_path(&nodes, &goal) {

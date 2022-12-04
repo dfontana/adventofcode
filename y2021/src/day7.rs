@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
@@ -21,21 +21,22 @@ impl Solve {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      positions: rust_util::read_input(2021, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      positions: value 
         .trim()
         .split(",")
         .map(|v| v.parse::<u32>().unwrap())
         .sorted()
         .collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let fuel_cost = |src: u32, dest: u32| (src as i32 - dest as i32).abs();
     let (pos, cost) = self.run_search(fuel_cost);

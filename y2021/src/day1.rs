@@ -1,20 +1,20 @@
 use itertools::Itertools;
-use rust_util::{AocDay, Day};
+use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   input: String,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
-    Ok(Box::new(Solve { input }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve { input: value })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       self

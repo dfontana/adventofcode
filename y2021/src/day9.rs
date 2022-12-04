@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display};
 
 const NEIGHBORS: [(isize, isize); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
@@ -9,19 +9,20 @@ pub struct Solve {
   lows: Vec<(usize, usize)>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let field = rust_util::read_input(2021, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    let field = value 
       .lines()
       .map(|l| l.chars().map(|c| c.to_digit(10).unwrap()).collect())
       .collect();
     let lows = get_low_idxs(&field);
-    Ok(Box::new(Solve { field, lows }))
+    Ok(Solve { field, lows })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let sum: u32 = self
       .lows

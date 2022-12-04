@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
@@ -143,12 +143,10 @@ fn sum_versions(p: &Packet) -> u64 {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let tape = input
       .trim()
       .chars()
@@ -163,9 +161,11 @@ impl Day for Solve {
       })
       .map(|v| if v { '1' } else { '0' })
       .collect::<String>();
-    Ok(Box::new(Solve { tape }))
+    Ok(Solve { tape })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let tape = self.tape.clone();
     let mut bits = tape.chars();

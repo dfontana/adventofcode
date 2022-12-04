@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{
   collections::{HashMap, HashSet},
   error::Error,
@@ -33,19 +33,15 @@ struct Path {
   used_double: bool,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      nodes: rust_util::read_input(2021, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve { nodes: value 
         .lines()
         .flat_map(|line| {
-          let mut pair = line.splitn(2, "-");
-          let src = pair.next().unwrap();
-          let dst = pair.next().unwrap();
-          vec![(src.clone(), dst.clone()), (dst.clone(), src.clone())]
+          let (src, dst) = line.split_once('-').unwrap();
+          vec![(src.to_string(), dst.to_string()), (dst.to_string(), src.to_string())]
         })
         .fold(HashMap::new(), |mut nodes, (s, d)| {
           nodes
@@ -58,10 +54,11 @@ impl Day for Solve {
               terminal: s == "end",
             });
           nodes
-        }),
-    }))
+        }), })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       explore(&self.nodes, &mut init_frontier(&self.nodes, true)).len(),

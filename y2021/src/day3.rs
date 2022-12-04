@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
@@ -7,23 +7,23 @@ pub struct Solve {
   mask_base: u32,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = rust_util::read_input(2021, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let bit_len = input.lines().next().unwrap().len();
-    Ok(Box::new(Solve {
+    Ok(Solve {
       input: input
         .lines()
         .map(|l| u32::from_str_radix(l, 2).unwrap())
         .collect(),
       bit_len,
       mask_base: 1 << bit_len - 1,
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let majority = majority(&self.input);
     let gamma = (0..self.bit_len)

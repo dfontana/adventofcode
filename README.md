@@ -1,9 +1,12 @@
 # README
 
+## For Rust Code
+
+- `cd` into specific year
 - Run with `cargo run <dayNumber>` from root dir (this Readme's dir)
 - Either manually place inputs into `input/d{dayNum}` or ensure you have a `.env` setup so we download for you.
 
-## .env format
+### .env format
 
 Should be in the root dir.
 

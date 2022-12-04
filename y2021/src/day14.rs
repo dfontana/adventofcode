@@ -1,5 +1,5 @@
 use itertools::{Itertools, MinMaxResult};
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 type Element = char;
@@ -14,16 +14,13 @@ pub struct Solve {
   rules: Vec<PairRule>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let mut template: Template = HashMap::new();
     let mut rules: Vec<PairRule> = Vec::new();
     let mut ends: (Element, Element) = (' ', ' ');
-
-    let input = rust_util::read_input(2021, d)?;
     let mut onto_transforms = false;
     for line in input.lines() {
       if line.is_empty() {
@@ -60,13 +57,15 @@ impl Day for Solve {
             });
       }
     }
-    Ok(Box::new(Solve {
+    Ok(Solve {
       template,
       ends,
       rules,
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let (min, max) = expand(&self.template, &self.rules, &self.ends, 10);
     Ok(Box::new(max - min))

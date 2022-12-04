@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::{Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 pub struct Solve {
@@ -7,14 +7,13 @@ pub struct Solve {
 
 const SPAWN_DAY: i32 = -1;
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
       ans: simulate(
-        rust_util::read_input(2021, d)?
+       value 
           .trim()
           .split(",")
           .map(|v| (v.parse::<i32>().unwrap(), 1))
@@ -28,9 +27,11 @@ impl Day for Solve {
         80,
         256,
       ),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(self.ans.0))
   }

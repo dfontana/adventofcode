@@ -17,7 +17,6 @@ impl Display for AocDay {
   }
 }
 
-
 pub trait Day: TryFrom<String, Error = Box<dyn std::error::Error>> {
   fn new(d: AocDay) -> Result<Self, Box<dyn Error>> {
       Self::try_from(read_input(d)?)
