@@ -6,43 +6,11 @@ use std::path::PathBuf;
 
 use proc_macro::TokenStream;
 use regex::Regex;
-// use syn::{parse_macro_input, Attribute, DeriveInput, Error, Lit, Meta, MetaNameValue};
-// let syn_input = parse_macro_input!(input as DeriveInput);
-// let root_path = syn_input
-//     .attrs
-//     .iter()
-//     .filter_map(|attr| match get_root_path(attr) {
-//         Ok(v) => v,
-//         Err(_) => panic!("Failed to parse attribute root_path; eg #[root_path = \"...\"]"),
-//     })
-//     .next()
-//     .expect(
-//         "Must provide directory root_path relative to Cargo.toml; eg #[root_path = \"...\"]",
-//     );
-
-// fn get_root_path(attr: &Attribute) -> syn::Result<Option<String>> {
-
-//     if !attr.path.is_ident("root_path") {
-//         return Ok(None);
-//     }
-
-//     match attr.parse_meta()? {
-//         Meta::NameValue(MetaNameValue {
-//             lit: Lit::Str(lit_str),
-//             ..
-//         }) => Ok(Some(lit_str.value())),
-//         _ => {
-//             let message = "expected #[root_path = \"...\"]";
-//             Err(Error::new_spanned(attr, message))
-//         }
-//     }
-// }
 
 fn find_solution_filenames(
     full_path: &PathBuf,
 ) -> Result<Vec<(usize, String, String)>, Box<dyn std::error::Error>> {
     let mut results: Vec<(usize, String, String)> = Vec::new();
-    // TODO: eventually let this support year and such organization
     let expression = Regex::new("(day([0-9]+)).rs")?;
     for entry in std::fs::read_dir(full_path)? {
         let entry = entry?;
@@ -67,7 +35,6 @@ fn find_solution_filenames(
 
 #[proc_macro]
 pub fn import_aoc_solutions(_input: TokenStream) -> TokenStream {
-    // TODO: Support the optional override form, since the current mod import only supports src/
     let root_path = "src/";
 
     let solution_paths = {
