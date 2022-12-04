@@ -1,9 +1,10 @@
 extern crate dotenv;
 extern crate rust_util;
 
-mod solutions;
-
-use solutions::*;
+mod day1;
+mod day2;
+mod day3;
+mod day4;
 
 use rust_util::{AocDay, Day};
 use std::{error::Error, time::Instant};
@@ -16,18 +17,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     .ok_or("No Day given to run")?;
 
   let now = Instant::now();
-  print!("\n{}\n", get_runner(AocDay::D(day))?.run()?);
+  print!("\n{}\n", run(AocDay::D(2022, day))?);
   let elapsed = now.elapsed();
   println!("Elapsed: {:.2?}", elapsed);
   Ok(())
 }
 
-fn get_runner(day: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>> {
+fn run(day: AocDay) -> Result<String, Box<dyn Error>> {
   match day {
-    AocDay::D(01) => Day1::new(day),
-    AocDay::D(02) => Day2::new(day),
-    AocDay::D(03) => Day3::new(day),
-    AocDay::D(04) => Day4::new(day),
+    AocDay::D(_, 1) => day1::Solve::new(day)?.run(),
+    AocDay::D(_, 2) => day2::Solve::new(day)?.run(),
+    AocDay::D(_, 3) => day3::Solve::new(day)?.run(),
+    AocDay::D(_, 4) => day4::Solve::new(day)?.run(),
     _ => Err("Unknown day given".into()),
   }
 }

@@ -1,29 +1,30 @@
-use rust_util::{AocDay, Day};
+use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   pairs: Vec<(String, String)>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let instr = rust_util::read_input(2022, d)?;
-    let pairs: Vec<(String, String)> = instr
-      .lines()
-      .map(|l| {
-        let mut split = l.split(' ');
-        (
-          split.next().unwrap().to_owned(),
-          split.next().unwrap().to_owned(),
-        )
-      })
-      .collect();
-    Ok(Box::new(Solve { pairs }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      pairs: value
+        .lines()
+        .map(|l| {
+          let mut split = l.split(' ');
+          (
+            split.next().unwrap().to_owned(),
+            split.next().unwrap().to_owned(),
+          )
+        })
+        .collect(),
+    })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let score: usize = self
       .pairs

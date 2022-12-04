@@ -1,4 +1,4 @@
-use rust_util::{AocDay, Day};
+use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
 type Range = (usize, usize);
@@ -22,16 +22,17 @@ fn into_range_pair(s: &str) -> (Range, Range) {
   )
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let instr = rust_util::read_input(2022, d)?;
-    let pairs: Vec<(Range, Range)> = instr.lines().map(into_range_pair).collect();
-    Ok(Box::new(Solve { pairs }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      pairs: value.lines().map(into_range_pair).collect(),
+    })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let fully_contained = self
       .pairs

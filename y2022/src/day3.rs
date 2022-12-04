@@ -1,20 +1,21 @@
-use rust_util::{AocDay, Day};
+use rust_util::Day;
 use std::{collections::HashSet, error::Error, fmt::Display};
 
 pub struct Solve {
   bags: Vec<String>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let instr = rust_util::read_input(2022, d)?;
-    let bags: Vec<String> = instr.lines().map(str::to_string).collect();
-    Ok(Box::new(Solve { bags }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      bags: value.lines().map(str::to_string).collect(),
+    })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let score: u32 = self
       .bags
