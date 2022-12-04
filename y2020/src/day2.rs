@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{Day};
 
 use std::{error::Error, fmt::Display};
 
@@ -38,15 +38,16 @@ fn split_bounds(bounds: &str) -> Result<(usize, usize), Box<dyn Error>> {
   ))
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input: Vec<PasswordEntry> = read_input(2020, d)?.lines().map(parse_line).collect();
-    Ok(Box::new(Solve { input }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+        let input: Vec<PasswordEntry> = value.lines().map(parse_line).collect();
+    Ok(Solve { input })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       self

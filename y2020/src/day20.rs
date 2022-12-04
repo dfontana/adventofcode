@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{Day};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -29,12 +29,11 @@ impl Tile {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let tiles = read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    let tiles = value
       .split("\n\n")
       .map(|t| {
         let mut lines = t.lines();
@@ -66,9 +65,11 @@ impl Day for Solve {
       return Err("Failed to build image".into());
     }
 
-    Ok(Box::new(Solve { grid, sides }))
+    Ok(Solve { grid, sides })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let checksum = self.grid[0][0].id
       * self.grid[0][self.sides - 1].id

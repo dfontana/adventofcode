@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{Day};
 
 use std::{error::Error, fmt::Display};
 
@@ -8,16 +8,17 @@ pub struct Solve {
   input: String,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      input: read_input(2020, d)?,
-    }))
-  }
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
 
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      input: value,
+    })
+  }
+}
+
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(trees_hit(&self, 3, 1).to_string()))
   }

@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::error::Error;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -48,20 +48,21 @@ impl FromStr for Action {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      actions: read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      actions: value 
         .lines()
         .map(Action::from_str)
         .flatten()
         .collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut dir = Direction::East;
     let (mut x, mut y) = (0, 0);

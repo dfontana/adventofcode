@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::error::Error;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -29,14 +29,12 @@ impl FromStr for Tile {
   }
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = read_input(2020, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
     let width = input.lines().next().map(str::len).unwrap();
-    Ok(Box::new(Solve {
+    Ok(Solve {
       tiles: input
         .lines()
         .map(|l| l.split("").map(Tile::from_str))
@@ -44,9 +42,11 @@ impl Day for Solve {
         .flatten()
         .collect(),
       width,
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let tile_update = update_tile(4, find_adjacent);
     Ok(Box::new(

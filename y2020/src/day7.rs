@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Display;
@@ -21,13 +21,12 @@ struct Formula {
   parts: Vec<Bag>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      formulas: read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      formulas: value 
         .lines()
         .map(|l| {
           let mut lr = l.split("contain");
@@ -46,9 +45,11 @@ impl Day for Solve {
           }
         })
         .collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut result: HashSet<String> = HashSet::new();
     let mut frontier: Vec<String> = vec!["shiny gold".to_string()];

@@ -1,24 +1,25 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   data: Vec<i32>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      data: read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      data: value 
         .lines()
         .map(|s| s.parse::<i32>())
         .flatten()
         .collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     match find_no_sum_num(&self.data).map(|v| v.to_string()) {
       Some(ans) => Ok(Box::new(format!("{}", ans))),

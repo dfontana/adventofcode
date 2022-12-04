@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
@@ -6,14 +6,12 @@ pub struct Solve {
   buses: Vec<(usize, usize)>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let inp = read_input(2020, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(inp: String) -> Result<Self, Self::Error> {
     let mut lines = inp.lines();
-    Ok(Box::new(Solve {
+    Ok(Solve {
       target: lines.next().map(|i| i.parse::<usize>()).unwrap()?,
       buses: lines
         .next()
@@ -25,9 +23,11 @@ impl Day for Solve {
             .collect()
         })
         .unwrap(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let ans = self
       .buses

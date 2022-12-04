@@ -3,7 +3,7 @@ use regex::Captures;
 use regex::Regex;
 
 use core::panic;
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::fmt::Display;
 use std::{collections::HashSet, error::Error, ops::RangeInclusive};
 
@@ -41,19 +41,17 @@ fn read_ticket(inp: &str) -> Vec<Vec<u64>> {
     .collect()
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let input = read_input(2020, d)?;
-    let mut sections = input.split("\n\n");
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(input: String) -> Result<Self, Self::Error> {
+        let mut sections = input.split("\n\n");
     let (rules, mine, others) = (
       sections.next().unwrap(),
       sections.next().unwrap(),
       sections.next().unwrap(),
     );
-    Ok(Box::new(Solve {
+    Ok(Solve {
       rules: rules
         .lines()
         .map(|l| {
@@ -67,9 +65,11 @@ impl Day for Solve {
         .collect(),
       my_ticket: read_ticket(mine)[0].clone(),
       other_tickets: read_ticket(others),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       self

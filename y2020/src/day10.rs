@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -7,12 +7,11 @@ pub struct Solve {
   jolts: Vec<u64>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let mut jolts: Vec<u64> = read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    let mut jolts: Vec<u64> = value 
       .lines()
       .map(|i| i.parse::<u64>())
       .flatten()
@@ -20,9 +19,11 @@ impl Day for Solve {
     jolts.insert(0, 0);
     jolts.sort();
     jolts.push(jolts[jolts.len() - 1] + 3);
-    Ok(Box::new(Solve { jolts }))
+    Ok(Solve { jolts })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut c1 = 0;
     let mut c3 = 0;

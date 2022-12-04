@@ -1,22 +1,23 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
   numbers: Vec<i32>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let numbers: Vec<i32> = read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+        let numbers: Vec<i32> =value 
       .lines()
       .map(|f| f.parse::<i32>().unwrap())
       .collect();
-    Ok(Box::new(Solve { numbers }))
+    Ok(Solve { numbers })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     for (idx, v) in self.numbers.iter().enumerate() {
       for ov in &self.numbers[idx + 1..] {

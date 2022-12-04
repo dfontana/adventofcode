@@ -1,4 +1,4 @@
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::{
   collections::{HashMap, HashSet},
   error::Error,
@@ -45,13 +45,12 @@ pub struct Solve {
   state: HashMap<Coord, Cell>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    Ok(Box::new(Solve {
-      state: read_input(2020, d)?
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      state:value 
         .lines()
         .enumerate()
         .map(|(y, l)| {
@@ -67,9 +66,11 @@ impl Day for Solve {
           acc.insert(Coord::new(x, y, 0), cell);
           acc
         }),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut state = self.state.clone();
     for _ in 0..6 {

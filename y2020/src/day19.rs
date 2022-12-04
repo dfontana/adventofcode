@@ -1,5 +1,5 @@
 use regex::Regex;
-use rust_util::{read_input, AocDay, Day};
+use rust_util::{ Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 type Rules = HashMap<String, String>;
@@ -9,14 +9,12 @@ pub struct Solve {
   messages: Vec<String>,
 }
 
-impl Day for Solve {
-  fn new(d: AocDay) -> Result<Box<dyn Day>, Box<dyn Error>>
-  where
-    Self: Sized,
-  {
-    let inp = read_input(2020, d)?;
+impl TryFrom<String> for Solve {
+  type Error = Box<dyn Error>;
+
+  fn try_from(inp: String) -> Result<Self, Self::Error> {
     let mut groups = inp.split("\n\n");
-    Ok(Box::new(Solve {
+    Ok(Solve {
       rules: groups
         .next()
         .unwrap()
@@ -28,9 +26,11 @@ impl Day for Solve {
           acc
         }),
       messages: groups.next().unwrap().lines().map(str::to_owned).collect(),
-    }))
+    })
   }
+}
 
+impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(solve(&self.rules, &self.messages).to_string()))
   }
