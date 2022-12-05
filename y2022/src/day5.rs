@@ -101,7 +101,23 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let partly_contained: usize = 0;
-    Ok(Box::new(partly_contained))
+   let mut cargo = self.cargo.clone();
+    for (count, from, to) in self.moves.iter() {
+      let mut boxes: Vec<char> = {
+          let st = cargo.get_mut(from).unwrap();
+          st.as_slice()[st.len()-count..].to_vec()
+      };
+      cargo.entry(*from).and_modify(|st| st.truncate(st.len()-count));
+      cargo.entry(*to).and_modify(|st2| st2.append(&mut boxes)); 
+    }
+
+    let mut code = String::new();
+    for i in 1..cargo.len() + 1 {
+      if let Some(c) = cargo.get_mut(&i).unwrap().pop() {
+        code.push(c);
+      }
+    }
+
+    Ok(Box::new(code))
   }
 }
