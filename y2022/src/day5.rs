@@ -82,8 +82,22 @@ impl TryFrom<String> for Solve {
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let fully_contained: usize = 0;
-    Ok(Box::new(fully_contained))
+    let mut cargo = self.cargo.clone();
+    for (count, from, to) in self.moves.iter() {
+      for _ in 0..*count {
+        let cbox = cargo.get_mut(from).unwrap().pop().unwrap();
+        cargo.entry(*to).and_modify(|st2| st2.push(cbox));
+      }
+    }
+
+    let mut code = String::new();
+    for i in 1..cargo.len() + 1 {
+      if let Some(c) = cargo.get_mut(&i).unwrap().pop() {
+        code.push(c);
+      }
+    }
+
+    Ok(Box::new(code))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
