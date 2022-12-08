@@ -14,7 +14,6 @@ enum DirSized {
 
 pub struct Solve {
   path_sizes: HashMap<PathBuf, DirSized>,
-  parents: HashMap<PathBuf, HashSet<PathBuf>>,
 }
 
 impl TryFrom<String> for Solve {
@@ -77,31 +76,11 @@ impl TryFrom<String> for Solve {
       }
     }
 
-    Ok(Solve {
-      path_sizes,
-      parents,
-    })
-  }
-}
-
-impl Day for Solve {
-  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut sizes = self.path_sizes.clone();
-    let mut total: usize = 0;
-    for path in self.path_sizes.keys() {
-      sum_children(&mut sizes, &self.parents, path);
-      if let Some(DirSized::Computed(v)) = sizes.get(path) {
-        if *v <= 100000 {
-          total += v;
-        }
-        continue;
-      }
+    for path in path_sizes.clone().keys() {
+      sum_children(&mut path_sizes, &parents, path);
     }
-    Ok(Box::new(total))
-  }
 
-  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new("yes"))
+    Ok(Solve { path_sizes })
   }
 }
 
@@ -125,4 +104,43 @@ fn sum_children(
       *d = DirSized::Computed(*v + total)
     }
   });
+}
+
+impl Day for Solve {
+  fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    let mut total: usize = 0;
+    for size in self.path_sizes.values() {
+      if let DirSized::Computed(v) = size {
+        if *v <= 100000 {
+          total += v;
+        }
+        continue;
+      }
+    }
+    Ok(Box::new(total))
+  }
+
+  fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    let mut smallest = PathBuf::new();
+    smallest.push("/");
+    let mut smallest_size: usize = 70_000_000;
+    let used = match self.path_sizes.get(&smallest).unwrap() {
+      DirSized::Computed(v) | DirSized::Raw(v) => *v,
+    };
+    let space_needed = 30_000_000 - (70_000_000 - used);
+    for (path, size) in &self.path_sizes {
+      let sz = match size {
+        DirSized::Computed(v) | DirSized::Raw(v) => *v,
+      };
+      if sz >= space_needed && sz < smallest_size {
+        smallest_size = sz;
+        smallest = path.to_path_buf();
+      }
+    }
+    Ok(Box::new(format!(
+      "{} - {}",
+      smallest.to_string_lossy(),
+      smallest_size
+    )))
+  }
 }
