@@ -3,10 +3,14 @@ use rust_util::Day;
 use std::collections::VecDeque;
 use std::{error::Error, fmt::Display};
 
+type Worry = usize;
 pub struct Solve {
   monkeys: Vec<Monkey>,
 }
 
+// Part 1: Some(66802)
+// Part 2: Some(21800916620)
+// Elapsed: 57ms
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
@@ -60,6 +64,30 @@ impl TryFrom<String> for Solve {
         test: Test {divide: 17, ttrue: 1, tfalse: 3,},
         inspected: 0,
       },
+      //  Monkey {
+      //   items: VecDeque::from([79, 98]),
+      //   operation: Operation::MulConst(19),
+      //   test: Test {divide: 23, ttrue: 2, tfalse: 3,},
+      //   inspected: 0,
+      // },
+      //  Monkey {
+      //   items: VecDeque::from([54, 65, 75, 74]),
+      //   operation: Operation::AddConst(6),
+      //   test: Test {divide: 19, ttrue: 2, tfalse: 0,},
+      //   inspected: 0,
+      // },
+      //  Monkey {
+      //   items: VecDeque::from([79, 60, 97]),
+      //   operation: Operation::Square,
+      //   test: Test {divide: 13, ttrue: 1, tfalse: 3,},
+      //   inspected: 0,
+      // },
+      //  Monkey {
+      //   items: VecDeque::from([74]),
+      //   operation: Operation::AddConst(3),
+      //   test: Test {divide: 17, ttrue: 0, tfalse: 1,},
+      //   inspected: 0,
+      // },
     ];
 
     Ok(Solve { monkeys })
@@ -68,13 +96,13 @@ impl TryFrom<String> for Solve {
 
 #[derive(Clone)]
 enum Operation {
-  AddConst(i32),
-  MulConst(i32),
+  AddConst(Worry),
+  MulConst(Worry),
   Square,
 }
 
 impl Operation {
-  fn apply(&self, inp: i32) -> i32 {
+  fn apply(&self, inp: Worry) -> Worry {
     match self {
       Operation::AddConst(v) => inp + v,
       Operation::MulConst(v) => inp * v,
@@ -85,13 +113,13 @@ impl Operation {
 
 #[derive(Clone)]
 struct Test {
-  divide: i32,
+  divide: Worry,
   ttrue: usize,
   tfalse: usize,
 }
 
 impl Test {
-  fn apply(&self, inp: i32) -> usize {
+  fn apply(&self, inp: Worry) -> usize {
     if inp % self.divide == 0 {
       self.ttrue
     } else {
@@ -102,7 +130,7 @@ impl Test {
 
 #[derive(Clone)]
 struct Monkey {
-  items: VecDeque<i32>,
+  items: VecDeque<Worry>,
   operation: Operation,
   test: Test,
   inspected: usize,
@@ -139,6 +167,35 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new("y"))
+    let reducer = self.monkeys.iter()
+      .map(|mk| mk.test.divide)
+      .reduce(|acc, x| acc * x)
+      .unwrap();
+
+    let mut monkeys = self.monkeys.clone();
+    for _ in 0..10000 {
+      for id in 0..monkeys.len() {
+        let mut new_monkeys = monkeys.clone();
+        let monkey = &mut monkeys[id];
+        while let Some(item) = monkey.items.pop_front() {
+          let new_item = monkey.operation.apply(item) % reducer;
+          new_monkeys[monkey.test.apply(new_item)]
+            .items
+            .push_back(new_item);
+          monkey.inspected += 1;
+        }
+        new_monkeys[id] = monkey.clone();
+        monkeys = new_monkeys;
+      }
+    }
+
+    let monkey_biz = monkeys
+      .iter()
+      .map(|mk| mk.inspected)
+      .sorted()
+      .rev()
+      .take(2)      
+      .reduce(|acc, x| acc * x);
+    Ok(Box::new(format!("{:?}", monkey_biz)))
   }
 }
