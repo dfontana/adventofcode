@@ -42,48 +42,73 @@ impl TryFrom<String> for Solve {
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    // System state
-    let mut cycle = 0;
-    let mut register_x = 1;
     let mut signal_strength = 0;
-
-    // Instruction State
-    let mut instr_ptr = self.instrs.iter();
-    let mut current_instr = instr_ptr.next();
-    let mut instr_cycle_cnt = 0;
-
-    loop {
-      let Some(instr) = current_instr else {
-        break;
-      };
-      instr_cycle_cnt += 1;
-      cycle += 1;
-
-      // Read
+    let read_op = |cycle: i32, register: i32| {
       if cycle == 20 || (cycle - 20) % 40 == 0 {
-        signal_strength += register_x * cycle;
+        signal_strength += register * cycle;
       }
-
-      // Check if instruction is done
-      if instr_cycle_cnt < instr.cycles() {
-        continue;
-      }
-      instr_cycle_cnt = 0;
-
-      // Perform writes
-      match instr {
-        Instr::AddX(v) => {
-          register_x += v; 
-        }
-        Instr::NoOp => (),
-      }
-      current_instr = instr_ptr.next();
-    }
+    };
+    simulate(&self.instrs, read_op);
 
     Ok(Box::new(signal_strength))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new("y"))
+    let mut crt = String::new();
+    let read_op = |cycle: i32, register: i32| {
+      let crt_pos = (cycle - 1) % 40;
+      if register == crt_pos || register - 1 == crt_pos || register + 1 == crt_pos {
+        crt += "#";
+      } else {
+        crt += ".";
+      }
+    };
+    simulate(&self.instrs, read_op);
+
+    let mut formatted_crt = String::new();
+    for (i, ch) in crt.chars().enumerate() {
+      if i % 40 == 0 {
+        formatted_crt += "\n";
+      }
+      formatted_crt += &ch.to_string();
+    }
+    Ok(Box::new(formatted_crt))
+  }
+}
+
+fn simulate(instrs: &[Instr], mut read_op: impl FnMut(i32, i32)) {
+  // System state
+  let mut cycle = 0;
+  let mut register_x = 1;
+
+  // Instruction State
+  let mut instr_ptr = instrs.iter();
+  let mut current_instr = instr_ptr.next();
+  let mut instr_cycle_cnt = 0;
+
+  loop {
+    let Some(instr) = current_instr else {
+        break;
+      };
+    instr_cycle_cnt += 1;
+    cycle += 1;
+
+    // Read
+    read_op(cycle, register_x);
+
+    // Check if instruction is done
+    if instr_cycle_cnt < instr.cycles() {
+      continue;
+    }
+    instr_cycle_cnt = 0;
+
+    // Perform writes
+    match instr {
+      Instr::AddX(v) => {
+        register_x += v;
+      }
+      Instr::NoOp => (),
+    }
+    current_instr = instr_ptr.next();
   }
 }
