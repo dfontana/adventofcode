@@ -8,89 +8,35 @@ pub struct Solve {
   monkeys: Vec<Monkey>,
 }
 
-// Part 1: Some(66802)
-// Part 2: Some(21800916620)
-// Elapsed: 57ms
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
-  fn try_from(_value: String) -> Result<Self, Self::Error> {
-    let monkeys = vec![
-      Monkey {
-        items: VecDeque::from([71, 56, 50, 73]),
-        operation: Operation::MulConst(11),
-        test: Test {divide: 13, ttrue: 1, tfalse: 7,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([70, 89, 82]),
-        operation: Operation::AddConst(1),
-        test: Test {divide: 7, ttrue: 3, tfalse: 6,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([52, 95]),
-        operation: Operation::Square,
-        test: Test {divide: 3, ttrue: 5, tfalse: 4,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([94, 64, 69, 87, 70]),
-        operation: Operation::AddConst(2),
-        test: Test {divide: 19, ttrue: 2, tfalse: 6,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([98, 72, 98, 53, 97, 51]),
-        operation: Operation::AddConst(6),
-        test: Test {divide: 5, ttrue: 0, tfalse: 5,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([79]),
-        operation: Operation::AddConst(7),
-        test: Test {divide: 2, ttrue: 7, tfalse: 0,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([77, 55, 63, 93, 66, 90, 88, 71]),
-        operation: Operation::MulConst(7),
-        test: Test {divide: 11, ttrue: 2, tfalse: 4,},
-        inspected: 0,
-      },
-       Monkey {
-        items: VecDeque::from([54, 97, 87, 70, 59, 82, 59]),
-        operation: Operation::AddConst(8),
-        test: Test {divide: 17, ttrue: 1, tfalse: 3,},
-        inspected: 0,
-      },
-      //  Monkey {
-      //   items: VecDeque::from([79, 98]),
-      //   operation: Operation::MulConst(19),
-      //   test: Test {divide: 23, ttrue: 2, tfalse: 3,},
-      //   inspected: 0,
-      // },
-      //  Monkey {
-      //   items: VecDeque::from([54, 65, 75, 74]),
-      //   operation: Operation::AddConst(6),
-      //   test: Test {divide: 19, ttrue: 2, tfalse: 0,},
-      //   inspected: 0,
-      // },
-      //  Monkey {
-      //   items: VecDeque::from([79, 60, 97]),
-      //   operation: Operation::Square,
-      //   test: Test {divide: 13, ttrue: 1, tfalse: 3,},
-      //   inspected: 0,
-      // },
-      //  Monkey {
-      //   items: VecDeque::from([74]),
-      //   operation: Operation::AddConst(3),
-      //   test: Test {divide: 17, ttrue: 0, tfalse: 1,},
-      //   inspected: 0,
-      // },
-    ];
-
-    Ok(Solve { monkeys })
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    Ok(Solve {
+      monkeys: value
+        .split("\n\n")
+        .map(|block| {
+          let mut lines = block.lines();
+          lines.next(); // Burn the first line
+          Monkey {
+            items: lines
+              .next()
+              .unwrap()
+              .trim_start_matches("  Starting items:")
+              .split(',')
+              .map(|v| v.trim().parse::<Worry>().unwrap())
+              .collect::<VecDeque<Worry>>(),
+            operation: Operation::from(lines.next().unwrap()),
+            test: Test::from((
+              lines.next().unwrap(),
+              lines.next().unwrap(),
+              lines.next().unwrap(),
+            )),
+            inspected: 0,
+          }
+        })
+        .collect(),
+    })
   }
 }
 
@@ -99,6 +45,20 @@ enum Operation {
   AddConst(Worry),
   MulConst(Worry),
   Square,
+}
+
+impl From<&str> for Operation {
+  fn from(value: &str) -> Self {
+    let mut instr = value
+      .trim_start_matches("  Operation: new = old ")
+      .split(' ');
+    match (instr.next().unwrap(), instr.next().unwrap()) {
+      ("*", "old") => Operation::Square,
+      ("*", v) => Operation::MulConst(v.parse::<Worry>().unwrap()),
+      ("+", v) => Operation::AddConst(v.parse::<Worry>().unwrap()),
+      _ => unreachable!("Invalid line: {}", value),
+    }
+  }
 }
 
 impl Operation {
@@ -116,6 +76,25 @@ struct Test {
   divide: Worry,
   ttrue: usize,
   tfalse: usize,
+}
+
+impl From<(&str, &str, &str)> for Test {
+  fn from((div, tt, tf): (&str, &str, &str)) -> Self {
+    Test {
+      divide: div
+        .trim_start_matches("  Test: divisible by ")
+        .parse::<Worry>()
+        .unwrap(),
+      ttrue: tt
+        .trim_start_matches("    If true: throw to monkey ")
+        .parse::<usize>()
+        .unwrap(),
+      tfalse: tf
+        .trim_start_matches("    If false: throw to monkey ")
+        .parse::<usize>()
+        .unwrap(),
+    }
+  }
 }
 
 impl Test {
@@ -136,66 +115,53 @@ struct Monkey {
   inspected: usize,
 }
 
+fn simulate(monkeys: &[Monkey], rounds: usize, reducer: impl Fn(Worry) -> Worry) -> usize {
+  let mut monkeys = monkeys.to_owned();
+
+  for _ in 0..rounds {
+    for id in 0..monkeys.len() {
+      let mut new_monkeys = monkeys.clone();
+      let monkey = &mut monkeys[id];
+      while let Some(item) = monkey.items.pop_front() {
+        let new_item = reducer(monkey.operation.apply(item));
+        new_monkeys[monkey.test.apply(new_item)]
+          .items
+          .push_back(new_item);
+        monkey.inspected += 1;
+      }
+      new_monkeys[id] = monkey.clone();
+      monkeys = new_monkeys;
+    }
+  }
+
+  monkeys
+    .iter()
+    .map(|mk| mk.inspected)
+    .sorted()
+    .rev()
+    .take(2)
+    .reduce(|acc, x| acc * x)
+    .unwrap()
+}
+
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut monkeys = self.monkeys.clone();
-
-    for _ in 0..20 {
-      for id in 0..monkeys.len() {
-        let mut new_monkeys = monkeys.clone();
-        let monkey = &mut monkeys[id];
-        while let Some(item) = monkey.items.pop_front() {
-          let new_item = monkey.operation.apply(item) / 3;
-          new_monkeys[monkey.test.apply(new_item)]
-            .items
-            .push_back(new_item);
-          monkey.inspected += 1;
-        }
-        new_monkeys[id] = monkey.clone();
-        monkeys = new_monkeys;
-      }
-    }
-
-    let monkey_biz = monkeys
-      .iter()
-      .map(|mk| mk.inspected)
-      .sorted()
-      .rev()
-      .take(2)
-      .reduce(|acc, x| acc * x);
-    Ok(Box::new(format!("{:?}", monkey_biz)))
+    Ok(Box::new(format!(
+      "{:?}",
+      simulate(&self.monkeys, 20, |inp| inp / 3)
+    )))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let reducer = self.monkeys.iter()
+    let reducer = self
+      .monkeys
+      .iter()
       .map(|mk| mk.test.divide)
       .reduce(|acc, x| acc * x)
       .unwrap();
-
-    let mut monkeys = self.monkeys.clone();
-    for _ in 0..10000 {
-      for id in 0..monkeys.len() {
-        let mut new_monkeys = monkeys.clone();
-        let monkey = &mut monkeys[id];
-        while let Some(item) = monkey.items.pop_front() {
-          let new_item = monkey.operation.apply(item) % reducer;
-          new_monkeys[monkey.test.apply(new_item)]
-            .items
-            .push_back(new_item);
-          monkey.inspected += 1;
-        }
-        new_monkeys[id] = monkey.clone();
-        monkeys = new_monkeys;
-      }
-    }
-
-    let monkey_biz = monkeys
-      .iter()
-      .map(|mk| mk.inspected)
-      .sorted()
-      .rev()
-      .take(2)      
-      .reduce(|acc, x| acc * x);
-    Ok(Box::new(format!("{:?}", monkey_biz)))
+    Ok(Box::new(format!(
+      "{:?}",
+      simulate(&self.monkeys, 10000, |inp| inp % reducer)
+    )))
   }
 }
