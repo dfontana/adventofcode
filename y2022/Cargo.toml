@@ -12,3 +12,4 @@ itertools = "0.10.1"
 regex = "1.5.4"
 rust-util = {path = "../rust-util"}
 rust-util-macro = {path = "../rust-util-macro"}
+serde_json = "1.0"
