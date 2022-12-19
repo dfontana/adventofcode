@@ -86,10 +86,16 @@ impl Day for Solve {
       // println!("\t-> {}", block_area);
     }
 
+    // Get each coords neighbors and filter out those that are
+    // a in the original coord list (non-neighbors)
     Ok(Box::new(surface_area.to_string()))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+    // Bounding box the min/max of all 3 dimensions, creating a cube the thing
+    // fits within. Then flood fill to find all the air pockets.
+    // Finally, for each cube, get it's neighbors but filter
+    // them to only those that are in the flood fill list.
     Ok(Box::new("y"))
   }
 }
