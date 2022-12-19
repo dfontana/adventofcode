@@ -1,42 +1,98 @@
 use itertools::Itertools;
 use rust_util::Day;
-use std::{
-  collections::{HashMap, HashSet},
-  error::Error,
-  fmt::Display,
-};
+use std::{collections::HashSet, error::Error, fmt::Display};
 
-type Coord = u8;
+type Coord = i8;
+type Bounds = (Coords, Coords);
 pub struct Solve {
   blocks: HashSet<Coords>,
 }
-#[derive(Eq, Hash, PartialEq)]
+
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
 struct Coords {
   x: Coord,
   y: Coord,
   z: Coord,
 }
 
+const OFFSETS: [(Coord, Coord, Coord); 6] = [
+  (0, 0, 1),
+  (0, 0, -1),
+  (0, 1, 0),
+  (0, -1, 0),
+  (1, 0, 0),
+  (-1, 0, 0),
+];
 impl Coords {
   fn neighbors(&self) -> Vec<Coords> {
-    // Just add the offsets to this & return
-    vec![]
+    let mut neigh = Vec::new();
+    for (dx, dy, dz) in OFFSETS {
+      neigh.push(Coords {
+        x: self.x + dx,
+        y: self.y + dy,
+        z: self.z + dz,
+      });
+    }
+    neigh
+  }
+
+  fn in_bounds(&self, (min, max): &Bounds) -> bool {
+    self.x >= min.x - 1
+      && self.x <= max.x + 1
+      && self.y >= min.y - 1
+      && self.y <= max.y + 1
+      && self.z >= min.z - 1
+      && self.z <= max.z + 1
   }
 }
 
 struct ExposedBox {
-    air: HashSet<Coords>,
+  air: HashSet<Coords>,
+}
+
+fn bounds(blocks: &HashSet<Coords>) -> Bounds {
+  let mut min = Coords::default();
+  let mut max = Coords::default();
+  for Coords { x, y, z } in blocks {
+    min.x = *x.min(&min.x);
+    max.x = *x.max(&max.x);
+    min.y = *y.min(&min.y);
+    max.y = *y.max(&max.y);
+    min.z = *z.min(&min.z);
+    max.z = *z.max(&max.z);
+  }
+  (min, max)
 }
 
 impl ExposedBox {
   fn from(blocks: &HashSet<Coords>) -> Self {
-    // (You should be able to just iterate, build, then subtract from the final set)
-    ExposedBox {air: HashSet::new()}
+    let bounds = bounds(blocks);
+    let mut air = HashSet::new();
+
+    let start = Coords::default();
+    let mut stack = Vec::new();
+    let mut seen = HashSet::new();
+
+    stack.push(start);
+    seen.insert(start);
+
+    while let Some(coord) = stack.pop() {
+      for neighbor in coord.neighbors() {
+        if blocks.contains(&neighbor) || !neighbor.in_bounds(&bounds) {
+          continue;
+        }
+        if seen.insert(neighbor) {
+          stack.push(neighbor);
+          air.insert(neighbor);
+        }
+      }
+    }
+
+    ExposedBox { air }
   }
 
-  /// Determines if the given coordinate is exposed
   fn contains(&self, coords: &Coords) -> bool {
-      self.air.contains(coords)
+    self.air.contains(coords)
   }
 }
 
@@ -71,78 +127,18 @@ impl Day for Solve {
         .count()
         .to_string(),
     ))
-    // let mut ylocal: HashMap<Coord, HashSet<(Coord, Coord)>> = HashMap::new();
-
-    // for coord in &self.blocks {
-    //   ylocal
-    //     .entry(*y)
-    //     .and_modify(|set| {set.insert((*x, *z));})
-    //     .or_insert_with(|| {
-    //       let mut set = HashSet::new();
-    //       set.insert((*x, *z));
-    //       set
-    //     });
-    // }
-
-    // // println!("{:?}", ylocal);
-
-    // let mut surface_area = 0;
-    // for (x, y, z) in &self.blocks {
-    //   // println!("{},{},{}", x, y, z);
-    //   let mut block_area = 0;
-    //   // Above:  x, y+1, z
-    //   match ylocal.get(
-    //     &(y-1)).map(|s| s.contains(&(*x, *z))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}",x,y-1,z),
-    //   };
-    //   // Below:  x, y-1, z
-    //   match ylocal.get(&(y+1)).map(|s| s.contains(&(*x, *z))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}", x,y+1,z),
-    //   };
-    //   // Left:   x-1, y, z
-    //   match ylocal.get(&y).map(|s| s.contains(&(*x-1, *z))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}", x-1,y,z),
-    //   };
-    //   // Right:  x+1, y, z
-    //   match ylocal.get(&y).map(|s| s.contains(&(*x+1, *z))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}", x+1,y,z),
-    //   };
-    //   // Behind: x, y, z-1
-    //   match ylocal.get(&y).map(|s| s.contains(&(*x, *z-1))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}", y,x,z-1),
-    //   };
-    //   // Front:  x, y, z+1
-    //   match ylocal.get(&y).map(|s| s.contains(&(*x, *z+1))) {
-    //     Some(false) | None => block_area += 1,
-    //     Some(true) => (),//println!("\tHit: {},{},{}", y,x,z+1),
-    //   };
-    //   surface_area += block_area;
-    //   // println!("\t-> {}", block_area);
-    // }
-
-    // // Get each coords neighbors and filter out those that are
-    // // a in the original coord list (non-neighbors)
-    // Ok(Box::new(surface_area.to_string()))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    // Bounding box the min/max of all 3 dimensions, creating a cube the thing
-    // fits within. Then flood fill to find all the air pockets.
-    // Finally, for each cube, get it's neighbors but filter
-    // them to only those that are in the flood fill list.
-      let bbox = BBox::from(&self.blocks);
+    let air = ExposedBox::from(&self.blocks);
     Ok(Box::new(
-        self.blocks
+      self
+        .blocks
         .iter()
-        .map(Coords::neighbors)
-        .filter(|c| bbox.contains(c))
+        .flat_map(Coords::neighbors)
+        .filter(|c| air.contains(c))
         .count()
-        .to_string()
+        .to_string(),
     ))
   }
 }
