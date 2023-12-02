@@ -24,31 +24,30 @@ impl FromStr for Game {
     if let Some((game, tsets)) = s.split_once(": ") {
       let id = game
         .strip_prefix("Game ")
-        .map(|id| id.parse::<usize>().expect(&format!("NaN id: {}", id)))
+        .map(|id| id.parse::<usize>().unwrap())
         .unwrap();
       let sets = tsets
         .split("; ")
         .map(|set| {
-          let mut green = 0;
-          let mut blue = 0;
-          let mut red = 0;
-          set.split(", ").for_each(|s| {
-            let (cnts, typ) = s.split_once(" ").expect(&format!("Not a Tile: {}", s));
-            let cnt = cnts.parse::<usize>().expect(&format!("NaN cnt: {}", cnts));
+          set.split(", ").fold(TileSet::blank(), |mut acc, s| {
+            let (cnt, typ) = s
+              .split_once(" ")
+              .map(|(ct, tp)| (ct.parse::<usize>().unwrap(), tp))
+              .unwrap();
             match typ {
               "green" => {
-                green = cnt;
+                acc.green = cnt;
               }
               "blue" => {
-                blue = cnt;
+                acc.blue = cnt;
               }
               "red" => {
-                red = cnt;
+                acc.red = cnt;
               }
               _ => unreachable!("Unknown type hit: {}", typ),
             }
-          });
-          TileSet { green, blue, red }
+            acc
+          })
         })
         .collect_vec();
       Ok(Game { id, sets })
@@ -67,18 +66,18 @@ impl Game {
   }
 
   fn min_req(&self) -> TileSet {
-    self.sets.iter().fold(
-      TileSet {
-        green: 0,
-        blue: 0,
-        red: 0,
-      },
-      TileSet::max_of,
-    )
+    self.sets.iter().fold(TileSet::blank(), TileSet::max_of)
   }
 }
 
 impl TileSet {
+  fn blank() -> Self {
+    TileSet {
+      green: 0,
+      blue: 0,
+      red: 0,
+    }
+  }
   fn power(self) -> usize {
     self.red * self.green * self.blue
   }
