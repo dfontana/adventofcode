@@ -14,6 +14,39 @@ struct Number {
   bbox: HashSet<Coord>,
 }
 
+#[derive(Default)]
+struct NumberBuilder {
+  value: String,
+  bbox: HashSet<Coord>,
+}
+impl NumberBuilder {
+  fn add(&mut self, c: char, (x, y): Coord) {
+    if self.value.is_empty() {
+      self.bbox.insert((x - 1, y - 1));
+      self.bbox.insert((x - 1, y));
+      self.bbox.insert((x - 1, y + 1));
+    }
+    self.value.push(c);
+    self.bbox.insert((x, y - 1));
+    self.bbox.insert((x, y + 1));
+  }
+  fn try_build(&mut self, (x, y): Coord) -> Option<Number> {
+    if self.value.is_empty() {
+      return None;
+    }
+    self.bbox.insert((x, y - 1));
+    self.bbox.insert((x, y));
+    self.bbox.insert((x, y + 1));
+    let n = Number {
+      value: self.value.parse::<usize>().unwrap(),
+      bbox: self.bbox.clone(),
+    };
+    self.value.clear();
+    self.bbox.clear();
+    Some(n)
+  }
+}
+
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
@@ -26,32 +59,16 @@ impl TryFrom<String> for Solve {
     let mut gears = HashSet::new();
 
     for line in value.lines() {
-      let mut num = String::new();
-      let mut bbox = HashSet::new();
+      let mut number = NumberBuilder::default();
       for c in line.chars() {
         if c.is_digit(10) {
-          if num.is_empty() {
-            bbox.insert((x - 1, y - 1));
-            bbox.insert((x - 1, y));
-            bbox.insert((x - 1, y + 1));
-          }
-          num.push(c);
-          bbox.insert((x, y - 1));
-          bbox.insert((x, y + 1));
+          number.add(c, (x, y));
           x += 1;
           continue;
         }
 
-        if !num.is_empty() {
-          bbox.insert((x, y - 1));
-          bbox.insert((x, y));
-          bbox.insert((x, y + 1));
-          numbers.push(Number {
-            value: num.parse::<usize>().unwrap(),
-            bbox: bbox.clone(),
-          });
-          num.clear();
-          bbox.clear();
+        if let Some(n) = number.try_build((x, y)) {
+          numbers.push(n);
         }
 
         if c != '.' {
@@ -63,18 +80,10 @@ impl TryFrom<String> for Solve {
 
         x += 1;
       }
-
-      if !num.is_empty() {
-        bbox.insert((x, y - 1));
-        bbox.insert((x, y));
-        bbox.insert((x, y + 1));
-        numbers.push(Number {
-          value: num.parse::<usize>().unwrap(),
-          bbox: bbox.clone(),
-        });
-        num.clear();
-        bbox.clear();
+      if let Some(n) = number.try_build((x, y)) {
+        numbers.push(n);
       }
+
       x = 0;
       y += 1;
     }
