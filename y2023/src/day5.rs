@@ -1,48 +1,50 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use rust_util::Day;
-use std::{
-  collections::{HashMap, HashSet, VecDeque},
-  error::Error,
-  fmt::Display,
-  ops::Range,
-};
-
-type Type = String;
-type Id = usize;
+use std::{collections::HashMap, error::Error, fmt::Display, ops::Range};
 
 #[derive(Debug)]
 pub struct Solve {
   seeds: Vec<Id>,
-  maps: HashMap<(Type, Type), Mapping>,
+  maps: HashMap<Category, Mapping>,
 }
-impl Solve {
-  fn maps_from(&self, typ: &Type) -> Vec<(Type, Type)> {
-    self
-      .maps
-      .iter()
-      .filter(|(k, _)| *k.0 == *typ)
-      .map(|(k, _)| k.to_owned())
-      .collect_vec()
-  }
+
+type Id = usize;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+enum Category {
+  SEED,
+  SOIL,
+  FERTILIZER,
+  WATER,
+  LIGHT,
+  TEMPERATURE,
+  HUMIDITY,
+  LOCATION,
 }
 
 #[derive(Debug)]
 struct Mapping {
-  src_type: Type,
-  dest_type: Type,
+  src_type: Category,
+  dest_type: Category,
   ranges: Vec<(Range<Id>, Range<Id>)>,
 }
-impl Mapping {
-  fn maps_to_id(&self, id: &Id) -> (Type, Id) {
-    self
-      .ranges
-      .iter()
-      .find(|(src, _)| src.contains(id))
-      .map(|(src, dest)| (self.dest_type.clone(), dest.start + (id - src.start)))
-      .unwrap_or((self.dest_type.clone(), *id))
+
+impl From<&str> for Category {
+  fn from(s: &str) -> Self {
+    match s {
+      "seed" => Self::SEED,
+      "soil" => Self::SOIL,
+      "fertilizer" => Self::FERTILIZER,
+      "water" => Self::WATER,
+      "light" => Self::LIGHT,
+      "temperature" => Self::TEMPERATURE,
+      "humidity" => Self::HUMIDITY,
+      "location" => Self::LOCATION,
+      _ => unreachable!(),
+    }
   }
 }
-
 impl From<&str> for Mapping {
   fn from(value: &str) -> Self {
     let mut lines = value.lines();
@@ -50,7 +52,7 @@ impl From<&str> for Mapping {
       .next()
       .and_then(|s| s.strip_suffix(" map:"))
       .and_then(|s| s.split_once("-to-"))
-      .map(|(s, d)| (s.to_string(), d.to_string()))
+      .map(|(s, d)| (Category::from(s), Category::from(d)))
       .unwrap();
     Mapping {
       src_type,
@@ -90,87 +92,73 @@ impl TryFrom<String> for Solve {
         .map(|s| s.split_whitespace().map(|n| n.parse::<usize>().unwrap()))
         .map(|v| v.collect())
         .unwrap(),
-      maps: groups
-        .map(Mapping::from)
-        .map(|m| ((m.src_type.clone(), m.dest_type.clone()), m))
-        .collect(),
+      maps: groups.map(Mapping::from).map(|m| (m.src_type, m)).collect(),
     })
+  }
+}
+
+impl Mapping {
+  fn maps_to_id(&self, id: &Id) -> (Category, Id) {
+    self
+      .ranges
+      .iter()
+      .find(|(src, _)| src.contains(id))
+      .map(|(src, dest)| (self.dest_type, dest.start + (id - src.start)))
+      .unwrap_or((self.dest_type, *id))
+  }
+}
+
+impl Solve {
+  fn find_min_loc<'a, I>(&self, rg: I) -> usize
+  where
+    I: Iterator<Item = usize>,
+  {
+    let mut min_loc: Id = usize::MAX;
+    let starter = self.maps.get(&Category::SEED).unwrap();
+    for seed in rg {
+      let mut pair = Some(starter.maps_to_id(&seed));
+      while let Some((src, id)) = pair {
+        if src == Category::LOCATION {
+          min_loc = min_loc.min(id);
+          break;
+        }
+        pair = self.maps.get(&src).map(|map| map.maps_to_id(&id));
+      }
+    }
+    min_loc
   }
 }
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut locations: HashSet<Id> = HashSet::new();
-    let mut frontier: VecDeque<(Type, Id)> = VecDeque::new();
-
-    // Init the BFS
-    for key in self.maps_from(&"seed".to_string()).iter() {
-      let map = self.maps.get(&key).unwrap();
-      for seed in self.seeds.iter() {
-        frontier.push_back(map.maps_to_id(seed));
-      }
-    }
-
-    // Do the actual BFS
-    while let Some((src, id)) = frontier.pop_front() {
-      for (dest, d_id) in self
-        .maps_from(&src)
-        .iter()
-        .filter_map(|key| self.maps.get(key).map(|m| m.maps_to_id(&id)))
-      {
-        if dest == "location" {
-          locations.insert(d_id);
-        } else {
-          frontier.push_back((dest, d_id));
-        }
-      }
-    }
-
-    Ok(Box::new(format!("{:?}", locations.iter().min())))
+    Ok(Box::new(format!(
+      "{:?}",
+      self.find_min_loc(self.seeds.clone().into_iter())
+    )))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut locations: HashSet<Id> = HashSet::new();
-    let mut frontier: VecDeque<(Type, Id)> = VecDeque::new();
-
-    // Init the BFS
     let seed_ranges = self
       .seeds
-      .windows(2)
+      .chunks_exact(2)
       .map(|win| Range {
         start: win[0],
-        end: win[1],
+        end: win[0] + win[1],
       })
+      .enumerate()
       .collect_vec();
 
-    println!("{:?}", seed_ranges);
-
-    for rg in seed_ranges.iter() {
-      for key in self.maps_from(&"seed".to_string()).iter() {
-        let map = self.maps.get(&key).unwrap();
-        for seed in rg.start..rg.end {
-          frontier.push_back(map.maps_to_id(&seed));
-        }
-      }
-    }
-
-    println!("Seeds done: {:?}", frontier.len());
-
-    // Do the actual BFS
-    while let Some((src, id)) = frontier.pop_front() {
-      for (dest, d_id) in self
-        .maps_from(&src)
-        .iter()
-        .filter_map(|key| self.maps.get(key).map(|m| m.maps_to_id(&id)))
-      {
-        if dest == "location" {
-          locations.insert(d_id);
-        } else {
-          frontier.push_back((dest, d_id));
-        }
-      }
-    }
-
-    Ok(Box::new(format!("{:?}", locations.iter().min())))
+    Ok(Box::new(format!(
+      "{:?}",
+      seed_ranges
+        .par_iter()
+        .map(|(idx, rg)| {
+          println!("[{}] Exploring Seeds {:?} ({:?})", idx, rg, rg.len());
+          let min = self.find_min_loc((rg.start..rg.end).into_iter());
+          println!("[{}] {:?} => {:?}", idx, rg, min);
+          min
+        })
+        .min()
+    )))
   }
 }
