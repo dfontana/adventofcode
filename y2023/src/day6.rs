@@ -5,6 +5,7 @@ use std::{error::Error, fmt::Display};
 #[derive(Debug)]
 pub struct Solve {
   races: Vec<Race>,
+  big_race: Race,
 }
 
 #[derive(Debug)]
@@ -17,24 +18,39 @@ impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
+    let (times, dists) = value
+      .split_once("\n")
+      .map(|(t, d)| {
+        (
+          t.strip_prefix("Time:").unwrap(),
+          d.strip_prefix("Distance:").unwrap(),
+        )
+      })
+      .unwrap();
+
     Ok(Solve {
-      races: value
-        .split_once("\n")
-        .map(|(t, d)| {
-          t.strip_prefix("Time:")
-            .map(|s| s.split_whitespace())
-            .unwrap()
-            .map(|n| n.parse::<usize>().unwrap())
-            .zip(
-              d.strip_prefix("Distance:")
-                .map(|s| s.split_whitespace())
-                .unwrap()
-                .map(|n| n.parse::<usize>().unwrap()),
-            )
-        })
-        .unwrap()
+      races: times
+        .split_whitespace()
+        .map(|n| n.parse::<usize>().unwrap())
+        .zip(
+          dists
+            .split_whitespace()
+            .map(|n| n.parse::<usize>().unwrap()),
+        )
         .map(|(time, distance): (usize, usize)| Race { time, distance })
         .collect_vec(),
+      big_race: Race {
+        time: times
+          .split_whitespace()
+          .collect::<String>()
+          .parse::<usize>()
+          .unwrap(),
+        distance: dists
+          .split_whitespace()
+          .collect::<String>()
+          .parse::<usize>()
+          .unwrap(),
+      },
     })
   }
 }
@@ -62,6 +78,6 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new("t"))
+    Ok(Box::new(format!("{:?}", self.big_race.solve().len())))
   }
 }
