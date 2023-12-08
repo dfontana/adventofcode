@@ -127,13 +127,82 @@ impl Solve {
     }
     min_loc
   }
+
+  // TODO: This isn't working yet, something is wrong with how splitting is handled not sure what tho
+  // Specifically that is the ss < ds or se > de cases, as part 1 doesn't exercise those two code paths
+  // P1: 662197086
+  // P2: 52510809
+  fn find_min_loc_splits(&self, seeds: Vec<Range<Id>>) -> Option<usize> {
+    [
+      Category::SEED,
+      Category::SOIL,
+      Category::FERTILIZER,
+      Category::WATER,
+      Category::LIGHT,
+      Category::TEMPERATURE,
+      Category::HUMIDITY,
+    ]
+    .iter()
+    .fold(seeds.clone(), |acc, cat| {
+      let mapping = self.maps.get(cat).unwrap();
+      acc
+        .iter()
+        .flat_map(|seed_rg: &Range<usize>| {
+          mapping
+            .ranges
+            .iter()
+            .find(|(src, _)| src.contains(&seed_rg.start) || src.contains(&(seed_rg.end - 1)))
+            .map(|(src, dst)| {
+              let (ss, se) = (seed_rg.start, seed_rg.end);
+              let (ds, de) = (src.start, src.end);
+
+              let mut splits = Vec::new();
+              let mut os = seed_rg.start;
+              if ss < ds {
+                splits.push(Range {
+                  start: seed_rg.start,
+                  end: src.end,
+                });
+                os = src.start;
+              }
+              let mut oe = seed_rg.end;
+              if se > de {
+                splits.push(Range {
+                  start: src.end,
+                  end: seed_rg.end,
+                });
+                oe = src.end;
+              }
+              splits.push(Range {
+                start: dst.start + (os - src.start),
+                end: dst.start + (oe - src.start),
+              });
+              splits
+            })
+            .unwrap_or_else(|| vec![seed_rg.clone()])
+        })
+        .collect_vec()
+    })
+    .iter()
+    .map(|rg| rg.start)
+    .min()
+  }
 }
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(format!(
       "{:?}",
-      self.find_min_loc(self.seeds.clone().into_iter())
+      self.find_min_loc_splits(
+        self
+          .seeds
+          .iter()
+          .map(|s| Range {
+            start: *s,
+            end: s + 1
+          })
+          .collect_vec()
+      )
     )))
   }
 
@@ -145,20 +214,11 @@ impl Day for Solve {
         start: win[0],
         end: win[0] + win[1],
       })
-      .enumerate()
       .collect_vec();
 
     Ok(Box::new(format!(
       "{:?}",
-      seed_ranges
-        .par_iter()
-        .map(|(idx, rg)| {
-          println!("[{}] Exploring Seeds {:?} ({:?})", idx, rg, rg.len());
-          let min = self.find_min_loc((rg.start..rg.end).into_iter());
-          println!("[{}] {:?} => {:?}", idx, rg, min);
-          min
-        })
-        .min()
+      self.find_min_loc_splits(seed_ranges)
     )))
   }
 }
