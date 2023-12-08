@@ -4,7 +4,7 @@ use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub struct Solve {
-  hands: Vec<Hand>,
+  input: Vec<(String, String)>,
 }
 
 #[derive(Debug)]
@@ -16,6 +16,7 @@ struct Hand {
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 enum Card {
+  JK,
   N2,
   N3,
   N4,
@@ -49,6 +50,13 @@ impl From<&[Card; 5]> for HandType {
     let mut compressed = [0; 5];
     let mut i = 0;
     let mut last_seen: Option<Card> = None;
+
+    // TODO:
+    // Joker card: Compute the handtype without the joker(s)
+    // then upgrade the hand for each joker:
+    // high -> one -> three -> four -> five.
+    // We never want to bother with two or full.
+
     for card in cards {
       match last_seen {
         None => compressed[i] += 1,
@@ -120,18 +128,18 @@ impl TryFrom<String> for Solve {
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
     Ok(Solve {
-      hands: value
+      input: value
         .lines()
         .filter_map(|s| s.split_once(" "))
-        .filter_map(|s| Hand::try_from(s).ok())
+        .map(|(h, b)| (h.to_string(), b.to_string()))
         .collect(),
     })
   }
 }
-impl TryFrom<(&str, &str)> for Hand {
+impl TryFrom<(&(String, String), bool)> for Hand {
   type Error = Box<dyn Error>;
 
-  fn try_from((hand, bid): (&str, &str)) -> Result<Self, Self::Error> {
+  fn try_from(((hand, bid), is_jk): (&(String, String), bool)) -> Result<Self, Self::Error> {
     let c = hand
       .chars()
       .map(|c| match c {
@@ -144,7 +152,8 @@ impl TryFrom<(&str, &str)> for Hand {
         '8' => Card::N8,
         '9' => Card::N9,
         'T' => Card::T,
-        'J' => Card::J,
+        'J' if !is_jk => Card::J,
+        'J' if is_jk => Card::JK,
         'Q' => Card::Q,
         'K' => Card::K,
         'A' => Card::A,
@@ -164,8 +173,9 @@ impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     Ok(Box::new(
       self
-        .hands
+        .input
         .iter()
+        .filter_map(|s| Hand::try_from((s, false)).ok())
         .sorted()
         .enumerate()
         .map(|(rank, hand)| (rank + 1) * hand.bid)
@@ -174,6 +184,15 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(
+      self
+        .input
+        .iter()
+        .filter_map(|s| Hand::try_from((s, true)).ok())
+        .sorted()
+        .enumerate()
+        .map(|(rank, hand)| (rank + 1) * hand.bid)
+        .sum::<usize>(),
+    ))
   }
 }
