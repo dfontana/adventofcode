@@ -50,14 +50,12 @@ impl From<&[Card; 5]> for HandType {
     let mut compressed = [0; 5];
     let mut i = 0;
     let mut last_seen: Option<Card> = None;
-
-    // TODO:
-    // Joker card: Compute the handtype without the joker(s)
-    // then upgrade the hand for each joker:
-    // high -> one -> three -> four -> five.
-    // We never want to bother with two or full.
-
+    let mut jokers = 0;
     for card in cards {
+      if card == Card::JK {
+        jokers += 1;
+        continue;
+      }
       match last_seen {
         None => compressed[i] += 1,
         Some(c) => {
@@ -73,16 +71,26 @@ impl From<&[Card; 5]> for HandType {
     }
     compressed.sort();
     compressed.reverse();
-    match compressed {
+    let mut hand = match compressed {
       [5, 0, 0, 0, 0] => HandType::Five,
-      [4, 1, 0, 0, 0] => HandType::Four,
+      [4, 1 | 0, 0, 0, 0] => HandType::Four,
       [3, 2, 0, 0, 0] => HandType::Full,
-      [3, 1, 1, 0, 0] => HandType::Three,
-      [2, 2, 1, 0, 0] => HandType::Two,
-      [2, 1, 1, 1, 0] => HandType::One,
-      [1, 1, 1, 1, 1] => HandType::High,
-      _ => unreachable!("{:?}\n{:?}", cards, compressed),
+      [3, 1 | 0, 1 | 0, 0, 0] => HandType::Three,
+      [2, 2, 1 | 0, 0, 0] => HandType::Two,
+      [2, 1 | 0, 1 | 0, 1 | 0, 0] => HandType::One,
+      [1 | 0, 1 | 0, 1 | 0, 1 | 0, 1 | 0] => HandType::High,
+      _ => unreachable!("\n{:?}\n{:?}", cards, compressed),
+    };
+    for _ in 0..jokers {
+      hand = match hand {
+        HandType::High => HandType::One,
+        HandType::One => HandType::Three,
+        HandType::Two => HandType::Full,
+        HandType::Three | HandType::Full => HandType::Four,
+        HandType::Four | HandType::Five => HandType::Five,
+      }
     }
+    hand
   }
 }
 
