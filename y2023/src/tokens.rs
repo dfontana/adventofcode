@@ -103,12 +103,34 @@ impl Parser {
 }
 
 pub trait FromParser<T> {
-  fn from_parse(value: Vec<String>) -> T;
+  fn from_parse(value: Vec<ParseToken>) -> T;
 }
 impl FromParser<(String, String, String)> for (String, String, String) {
-  fn from_parse(vec: Vec<String>) -> (String, String, String) {
-    (vec[0].clone(), vec[1].clone(), vec[2].clone())
+  fn from_parse(vec: Vec<ParseToken>) -> (String, String, String) {
+    if vec.len() != 3 {
+      panic!("Parsed more than 3 tokens, can't make tuple3");
+    }
+
+    (vec[0].as_string(), vec[1].as_string(), vec[2].as_string())
   }
+}
+
+pub enum ParseToken {
+  String(String),
+  Number(i64),
+}
+impl ParseToken {
+  pub fn as_string(&self) -> String {
+    todo!();
+  }
+}
+
+#[derive(Clone)]
+enum BldOps {
+  TakeUntil(String),
+  TakeUntilWhitespace,
+  TakeNumber(T),
+  Consume(String),
 }
 
 pub struct LineParseBuilder {
@@ -139,6 +161,16 @@ impl LineParseBuilder {
     self
   }
 
+  pub fn take_i64(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeI64);
+    self
+  }
+
+  pub fn take_usize(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeUSize);
+    self
+  }
+
   pub fn consume(&mut self, token: &str) -> &mut Self {
     self.ops.push(BldOps::Consume(token.to_string()));
     self
@@ -154,8 +186,9 @@ impl LineParseBuilder {
         .ops
         .iter()
         .filter_map(|op| match op {
-          BldOps::TakeUntil(t) => Some(p.take_until(t)),
-          BldOps::TakeUntilWhitespace => Some(p.take_until_whitespace()),
+          BldOps::TakeUntil(t) => Some(ParseToken::String(p.take_until(t))),
+          BldOps::TakeUntilWhitespace => Some(ParseToken::String(p.take_until_whitespace())),
+          BldOps::TakeNumber => Some(ParseToken::Number(p.take_number().unwrap())),
           BldOps::Consume(t) => {
             p.consume(t);
             None
@@ -164,13 +197,6 @@ impl LineParseBuilder {
         .collect(),
     )
   }
-}
-
-#[derive(Clone)]
-enum BldOps {
-  TakeUntil(String),
-  TakeUntilWhitespace,
-  Consume(String),
 }
 
 impl<'a, T> Iterator for LineParser<'a, T>
