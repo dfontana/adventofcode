@@ -3,52 +3,52 @@ use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {
-  readings: Vec<Vec<i64>>,
+  firsts: Vec<Vec<i64>>,
+  lasts: Vec<Vec<i64>>,
 }
 
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    Ok(Solve {
-      readings: value
-        .lines()
-        .map(|s| {
-          s.split_whitespace()
-            .map(|s| s.parse::<i64>().unwrap())
-            .collect()
-        })
-        .collect(),
-    })
+    let (firsts, lasts) = value
+      .lines()
+      .map(|s| {
+        s.split_whitespace()
+          .map(|s| s.parse::<i64>().unwrap())
+          .collect_vec()
+      })
+      .map(Solve::ends_diffs)
+      .fold((Vec::new(), Vec::new()), |(mut afs, mut als), (fs, ls)| {
+        afs.push(fs);
+        als.push(ls);
+        (afs, als)
+      });
+    Ok(Solve { firsts, lasts })
   }
 }
 
 impl Solve {
-  fn predict_next(reading: &Vec<i64>) -> i64 {
+  fn ends_diffs(reading: Vec<i64>) -> (Vec<i64>, Vec<i64>) {
     let mut diffs: Vec<Vec<i64>> = vec![reading.clone()];
-    let mut finals: Vec<i64> = Vec::new();
+    let (mut firsts, mut lasts) = (Vec::new(), Vec::new());
 
-    // Reduce the diffs
-    let mut diff_0 = false;
-    while !diff_0 {
-      let mut di = true;
-      let next = diffs.pop().unwrap();
-      let d = next
-        .iter()
-        .tuple_windows()
-        .map(|(a, b)| b - a)
-        .map(|d| {
-          if d != 0 {
-            di = false;
-          }
-          d
-        })
-        .collect();
-      finals.push(*next.last().unwrap());
-      diff_0 = di;
-      diffs.push(d);
+    while let Some(next) = diffs.pop() {
+      lasts.push(*next.last().unwrap());
+      firsts.push(*next.first().unwrap());
+      let (is_zero, diff) = next.iter().tuple_windows().map(|(a, b)| b - a).fold(
+        (true, Vec::new()),
+        |(is_zero, mut diff), d| {
+          diff.push(d);
+          (is_zero && d == 0, diff)
+        },
+      );
+      if !is_zero {
+        diffs.push(diff);
+      }
     }
-    finals.iter().rev().fold(0, |delta, b| delta + b)
+
+    (firsts, lasts)
   }
 }
 
@@ -57,14 +57,21 @@ impl Day for Solve {
     Ok(Box::new(format!(
       "{:?}",
       self
-        .readings
+        .lasts
         .iter()
-        .map(Solve::predict_next)
+        .map(|r| r.iter().rev().fold(0, |delta, b| delta + b))
         .reduce(|a, b| a + b),
     )))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(format!(
+      "{:?}",
+      self
+        .firsts
+        .iter()
+        .map(|r| r.iter().rev().fold(0, |delta, b| b - delta))
+        .reduce(|a, b| a + b),
+    )))
   }
 }
