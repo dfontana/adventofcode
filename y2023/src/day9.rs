@@ -30,7 +30,7 @@ impl TryFrom<String> for Solve {
 
 impl Solve {
   fn ends_diffs(reading: Vec<i64>) -> (Vec<i64>, Vec<i64>) {
-    let mut diffs: Vec<Vec<i64>> = vec![reading.clone()];
+    let mut diffs: Vec<Vec<i64>> = vec![reading];
     let (mut firsts, mut lasts) = (Vec::new(), Vec::new());
 
     while let Some(next) = diffs.pop() {
