@@ -1,15 +1,18 @@
 use itertools::Itertools;
-use rayon::prelude::*;
 use rust_util::Day;
-use std::{collections::HashMap, error::Error, fmt::Display, ops::Range};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub struct Solve {
-  seeds: Vec<Id>,
+  seeds: Vec<usize>,
   maps: HashMap<Category, Mapping>,
 }
 
-type Id = usize;
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Range {
+  start: usize,
+  end: usize,
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 enum Category {
@@ -26,8 +29,7 @@ enum Category {
 #[derive(Debug)]
 struct Mapping {
   src_type: Category,
-  dest_type: Category,
-  ranges: Vec<(Range<Id>, Range<Id>)>,
+  ranges: Vec<(Range, Range)>,
 }
 
 impl From<&str> for Category {
@@ -48,33 +50,21 @@ impl From<&str> for Category {
 impl From<&str> for Mapping {
   fn from(value: &str) -> Self {
     let mut lines = value.lines();
-    let (src_type, dest_type) = lines
+    let src_type = lines
       .next()
       .and_then(|s| s.strip_suffix(" map:"))
       .and_then(|s| s.split_once("-to-"))
-      .map(|(s, d)| (Category::from(s), Category::from(d)))
+      .map(|(s, _)| Category::from(s))
       .unwrap();
     Mapping {
       src_type,
-      dest_type,
       ranges: lines
         .filter_map(|s| {
           s.split_whitespace()
             .map(|n| n.parse::<usize>().unwrap())
             .collect_tuple()
         })
-        .map(|(dest, src, size)| {
-          (
-            Range {
-              start: src,
-              end: src + size,
-            },
-            Range {
-              start: dest,
-              end: dest + size,
-            },
-          )
-        })
+        .map(|(dest, src, size)| (Range::of_len(src, size), Range::of_len(dest, size)))
         .collect(),
     }
   }
@@ -97,42 +87,45 @@ impl TryFrom<String> for Solve {
   }
 }
 
-impl Mapping {
-  fn maps_to_id(&self, id: &Id) -> (Category, Id) {
-    self
-      .ranges
-      .iter()
-      .find(|(src, _)| src.contains(id))
-      .map(|(src, dest)| (self.dest_type, dest.start + (id - src.start)))
-      .unwrap_or((self.dest_type, *id))
+impl Range {
+  fn new(start: usize, end: usize) -> Self {
+    if start >= end {
+      panic!("Zero length range requested");
+    }
+    Range { start, end }
+  }
+  fn of_len(start: usize, len: usize) -> Self {
+    Range::new(start, start + len)
+  }
+
+  fn split(&self, src: &Range, dst: &Range) -> Option<Vec<Range>> {
+    if src.end <= self.start || self.end <= src.start {
+      return None;
+    }
+    let mut splits = Vec::new();
+
+    let mut offset = 0;
+    let mut start = self.start;
+    if start < src.start {
+      splits.push(Range::new(start, src.start));
+      start = src.start;
+    } else if src.start <= start {
+      offset = self.start - src.start;
+    }
+
+    let mut end = self.end;
+    if src.end < end {
+      splits.push(Range::new(src.end, end));
+      end = src.end;
+    }
+
+    splits.push(Range::of_len(dst.start + offset, end - start));
+    Some(splits)
   }
 }
 
 impl Solve {
-  fn find_min_loc<'a, I>(&self, rg: I) -> usize
-  where
-    I: Iterator<Item = usize>,
-  {
-    let mut min_loc: Id = usize::MAX;
-    let starter = self.maps.get(&Category::SEED).unwrap();
-    for seed in rg {
-      let mut pair = Some(starter.maps_to_id(&seed));
-      while let Some((src, id)) = pair {
-        if src == Category::LOCATION {
-          min_loc = min_loc.min(id);
-          break;
-        }
-        pair = self.maps.get(&src).map(|map| map.maps_to_id(&id));
-      }
-    }
-    min_loc
-  }
-
-  // TODO: This isn't working yet, something is wrong with how splitting is handled not sure what tho
-  // Specifically that is the ss < ds or se > de cases, as part 1 doesn't exercise those two code paths
-  // P1: 662197086
-  // P2: 52510809
-  fn find_min_loc_splits(&self, seeds: Vec<Range<Id>>) -> Option<usize> {
+  fn find_min_loc_splits(&self, seeds: Vec<Range>) -> Option<usize> {
     [
       Category::SEED,
       Category::SOIL,
@@ -143,45 +136,21 @@ impl Solve {
       Category::HUMIDITY,
     ]
     .iter()
-    .fold(seeds.clone(), |acc, cat| {
+    .fold(seeds.clone(), |mut acc, cat| {
       let mapping = self.maps.get(cat).unwrap();
-      acc
-        .iter()
-        .flat_map(|seed_rg: &Range<usize>| {
-          mapping
-            .ranges
-            .iter()
-            .find(|(src, _)| src.contains(&seed_rg.start) || src.contains(&(seed_rg.end - 1)))
-            .map(|(src, dst)| {
-              let (ss, se) = (seed_rg.start, seed_rg.end);
-              let (ds, de) = (src.start, src.end);
-
-              let mut splits = Vec::new();
-              let mut os = seed_rg.start;
-              if ss < ds {
-                splits.push(Range {
-                  start: seed_rg.start,
-                  end: src.end,
-                });
-                os = src.start;
-              }
-              let mut oe = seed_rg.end;
-              if se > de {
-                splits.push(Range {
-                  start: src.end,
-                  end: seed_rg.end,
-                });
-                oe = src.end;
-              }
-              splits.push(Range {
-                start: dst.start + (os - src.start),
-                end: dst.start + (oe - src.start),
-              });
-              splits
-            })
-            .unwrap_or_else(|| vec![seed_rg.clone()])
-        })
-        .collect_vec()
+      let mut new_acc = Vec::new();
+      while let Some(seed_rg) = acc.pop() {
+        let mut res = mapping
+          .ranges
+          .iter()
+          .find_map(|(src, dst)| seed_rg.split(src, dst))
+          .unwrap_or_else(|| vec![seed_rg.clone()]);
+        new_acc.push(res.pop().expect("Must have item"));
+        for r in res {
+          acc.push(r);
+        }
+      }
+      new_acc
     })
     .iter()
     .map(|rg| rg.start)
@@ -197,10 +166,7 @@ impl Day for Solve {
         self
           .seeds
           .iter()
-          .map(|s| Range {
-            start: *s,
-            end: s + 1
-          })
+          .map(|s| Range::of_len(*s, 1))
           .collect_vec()
       )
     )))
@@ -210,10 +176,7 @@ impl Day for Solve {
     let seed_ranges = self
       .seeds
       .chunks_exact(2)
-      .map(|win| Range {
-        start: win[0],
-        end: win[0] + win[1],
-      })
+      .map(|win| Range::of_len(win[0], win[1]))
       .collect_vec();
 
     Ok(Box::new(format!(
