@@ -5,6 +5,8 @@ use rust_util::{AocDay, Day};
 use rust_util_macro::import_aoc_solutions;
 use std::{error::Error, time::Instant};
 
+mod tokens;
+
 import_aoc_solutions!();
 
 fn main() -> Result<(), Box<dyn Error>> {

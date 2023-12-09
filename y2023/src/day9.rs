@@ -1,3 +1,4 @@
+use crate::tokens::Parser;
 use itertools::Itertools;
 use rust_util::Day;
 use std::{error::Error, fmt::Display};
@@ -13,11 +14,7 @@ impl TryFrom<String> for Solve {
   fn try_from(value: String) -> Result<Self, Self::Error> {
     let (firsts, lasts) = value
       .lines()
-      .map(|s| {
-        s.split_whitespace()
-          .map(|s| s.parse::<i64>().unwrap())
-          .collect_vec()
-      })
+      .map(|s| Parser::new(s).numbers::<i64>())
       .map(Solve::ends_diffs)
       .fold((Vec::new(), Vec::new()), |(mut afs, mut als), (fs, ls)| {
         afs.push(fs);

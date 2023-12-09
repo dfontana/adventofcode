@@ -1,6 +1,7 @@
-use itertools::Itertools;
 use rust_util::Day;
 use std::{collections::HashMap, error::Error, fmt::Display};
+
+use crate::tokens::Parser;
 
 #[derive(Debug)]
 pub struct Solve {
@@ -9,13 +10,23 @@ pub struct Solve {
 }
 
 #[derive(Clone, Debug)]
+struct CircleBuf(Vec<Dir>, usize, usize);
+
+#[derive(Clone, Debug)]
 enum Dir {
   Left,
   Right,
 }
 
-#[derive(Clone, Debug)]
-struct CircleBuf(Vec<Dir>, usize, usize);
+impl From<&char> for Dir {
+  fn from(c: &char) -> Self {
+    match c {
+      'L' => Dir::Left,
+      'R' => Dir::Right,
+      _ => unreachable!(),
+    }
+  }
+}
 
 impl CircleBuf {
   fn next(&mut self) -> &Dir {
@@ -31,27 +42,16 @@ impl TryFrom<String> for Solve {
   fn try_from(value: String) -> Result<Self, Self::Error> {
     let (inst, maze) = value.split_once("\n\n").unwrap();
     Ok(Solve {
-      ins: CircleBuf(
-        inst
-          .chars()
-          .map(|c| match c {
-            'L' => Dir::Left,
-            'R' => Dir::Right,
-            _ => unreachable!(),
-          })
-          .collect_vec(),
-        inst.len(),
-        0,
-      ),
-      maze: maze
-        .lines()
-        .filter_map(|l| l.split_once(" = "))
-        .filter_map(|(key, tup)| {
-          tup
-            .trim_matches(|c| c == '(' || c == ')')
-            .split_once(", ")
-            .map(|(l, r)| (key.to_owned(), (l.to_owned(), r.to_owned())))
-        })
+      ins: CircleBuf(Parser::new(inst).from_chars::<Dir>(), inst.len(), 0),
+      maze: Parser::new(maze)
+        .lines(
+          Parser::lazy()
+            .take_until(" = ")
+            .consume("(")
+            .take_until(", ")
+            .take_until(")"),
+        )
+        .map(|(k, d1, d2)| (k, (d1, d2)))
         .collect(),
     })
   }
