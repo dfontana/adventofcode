@@ -58,11 +58,11 @@ impl TryFrom<String> for Solve {
 }
 
 impl Solve {
-  fn steps_to_end(&self) -> usize {
+  fn steps_to_end(&self, pos: &str, is_goal: impl Fn(&String) -> bool) -> usize {
     let mut ins = self.ins.clone();
     let mut step = 0;
-    let mut ptr = "AAA";
-    while ptr != "ZZZ" {
+    let mut ptr = &pos.to_string();
+    while !is_goal(&ptr) {
       let (l, r) = self.maze.get(ptr).unwrap();
       ptr = match ins.next() {
         Dir::Left => l,
@@ -76,10 +76,35 @@ impl Solve {
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(self.steps_to_end()))
+    Ok(Box::new(self.steps_to_end("AAA", |s| s == "ZZZ")))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(
+      self
+        .maze
+        .keys()
+        .filter(|k| k.ends_with('A'))
+        .map(|pos| self.steps_to_end(&pos, |s| s.ends_with('Z')))
+        .reduce(|acc, e| lcm(acc, e))
+        .unwrap(),
+    ))
+  }
+}
+
+fn gcd(a: usize, b: usize) -> usize {
+  if a == 0 || b == 0 {
+    a + b
+  } else {
+    let max = a.max(b);
+    let min = a.min(b);
+    gcd(max % min, min)
+  }
+}
+fn lcm(a: usize, b: usize) -> usize {
+  if a == 0 || b == 0 {
+    0
+  } else {
+    (a * b) / gcd(a, b)
   }
 }
