@@ -1,5 +1,10 @@
 #![allow(dead_code)]
-use std::{collections::VecDeque, marker::PhantomData, str::FromStr, fmt::Debug};
+use std::{
+  collections::{HashSet, VecDeque},
+  fmt::Debug,
+  marker::PhantomData,
+  str::FromStr,
+};
 
 use tracing::debug;
 
@@ -56,6 +61,28 @@ impl FromParser<(Vec<usize>, Vec<usize>)> for (Vec<usize>, Vec<usize>) {
   }
 }
 
+impl FromParser<(usize, HashSet<usize>, HashSet<usize>)>
+  for (usize, HashSet<usize>, HashSet<usize>)
+{
+  fn from_parse(value: Vec<ParseToken>) -> (usize, HashSet<usize>, HashSet<usize>) {
+    if value.len() != 3 {
+      panic!("Parsed more than 3 tokens, can't make tuple3");
+    }
+    (
+      value[0].as_usize(),
+      HashSet::from_iter(value[1].as_usizes().iter().cloned()),
+      HashSet::from_iter(value[2].as_usizes().iter().cloned()),
+    )
+  }
+}
+
+
+impl FromParser<Vec<ParseToken>> for Vec<ParseToken> {
+  fn from_parse(value: Vec<ParseToken>) -> Vec<ParseToken> {
+    value
+  }
+}
+
 pub struct Parser {
   buffer: Vec<char>,
   index: usize,
@@ -84,13 +111,17 @@ impl Parser {
 
   pub fn take_until_not_digit(&mut self) -> String {
     let mut s = String::new();
-    while let Some(c) = self.buffer.get(self.index).filter(|c| c.is_digit(10) || **c == '-') {
+    while let Some(c) = self
+      .buffer
+      .get(self.index)
+      .filter(|c| c.is_digit(10) || **c == '-')
+    {
       s.push(*c);
       self.index += 1;
     }
     s
   }
-  
+
   pub fn take_until_newline(&mut self) -> Option<String> {
     let mut s = String::new();
     while let Some(c) = self.buffer.get(self.index).filter(|c| **c != '\n') {
@@ -125,6 +156,15 @@ impl Parser {
     s
   }
 
+  pub fn take_rest(&mut self) -> String {
+    let mut s = String::new();
+    while let Some(c) = self.buffer.get(self.index) {
+      s.push(*c);
+      self.index += 1;
+    }
+    s
+  }
+
   pub fn consume(&mut self, token: &str) {
     self.take_until(token);
     debug!("Consumed: {:?} -> {:?}", token, &self.buffer[self.index..]);
@@ -145,10 +185,10 @@ impl Parser {
   pub fn numbers<T: FromStr + Debug>(&mut self) -> Vec<T> {
     let mut v = Vec::new();
     while let Some(n) = self.take_number::<T>() {
-    debug!("Took num: {:?} -> {:?}", n, &self.buffer[self.index..]);
+      debug!("Took num: {:?} -> {:?}", n, &self.buffer[self.index..]);
       v.push(n);
     }
-    debug!("All Nums Consumed: {:?}",&self.buffer[self.index..]);
+    debug!("All Nums Consumed: {:?}", &self.buffer[self.index..]);
     v
   }
 
@@ -159,6 +199,14 @@ impl Parser {
       self.index += 1;
     }
     v
+  }
+
+  fn take_segments(&mut self, token: &str, ops: &LineParseBuilder) -> Vec<Vec<ParseToken>> {
+    let mut vec = Vec::new();
+    while let Some(chunk) = Some(self.take_until(token)).filter(|s| !s.is_empty()) {
+      vec.push(ops.apply(&chunk));
+    }
+    vec
   }
 
   pub fn lines<T>(self, ops: &mut LineParseBuilder) -> LineParser<T>
@@ -177,12 +225,14 @@ pub trait FromParser<T> {
   fn from_parse(value: Vec<ParseToken>) -> T;
 }
 
+#[derive(Clone, Debug)]
 pub enum ParseToken {
   String(String),
   I64(i64),
   I64s(Vec<i64>),
   Usize(usize),
   Usizes(Vec<usize>),
+  Segments(Vec<Vec<ParseToken>>),
 }
 impl ParseToken {
   pub fn as_string(&self) -> String {
@@ -215,20 +265,29 @@ impl ParseToken {
       _ => panic!("Not a Vec<i64> type"),
     }
   }
+  pub fn as_segments(&self) -> Vec<Vec<ParseToken>> {
+    match self {
+      ParseToken::Segments(s) => s.to_owned(),
+      _ => panic!("Not a Segment type"),
+    }
+  }
 }
 
 #[derive(Clone)]
 enum BldOps {
   TakeUntil(String),
-  ConsumeWhitespace,
   TakeNonWhitespace,
+  TakeRest,
   TakeI64,
   TakeI64s,
   TakeUSize,
   TakeUSizes,
+  ConsumeWhitespace,
   Consume(String),
+  Segments(String, LineParseBuilder),
 }
 
+#[derive(Clone)]
 pub struct LineParseBuilder {
   ops: Vec<BldOps>,
 }
@@ -262,6 +321,11 @@ impl LineParseBuilder {
     self
   }
 
+  pub fn take_rest(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeRest);
+    self
+  }
+
   pub fn take_i64(&mut self) -> &mut Self {
     self.ops.push(BldOps::TakeI64);
     self
@@ -287,6 +351,11 @@ impl LineParseBuilder {
     self
   }
 
+  pub fn segments(&mut self, token: &str, ops: &mut LineParseBuilder) -> & mut Self {
+    self.ops.push(BldOps::Segments(token.to_string(), ops.clone()));
+    self
+  }
+
   pub fn apply<T>(&self, s: &str) -> T
   where
     T: FromParser<T>,
@@ -299,14 +368,16 @@ impl LineParseBuilder {
         .filter_map(|op| match op {
           BldOps::TakeUntil(t) => Some(ParseToken::String(p.take_until(t))),
           BldOps::TakeNonWhitespace => Some(ParseToken::String(p.take_until_whitespace())),
-          BldOps::TakeI64 => Some(ParseToken::I64(p.take_number().unwrap())),
+          BldOps::TakeRest => Some(ParseToken::String(p.take_rest())),
+          BldOps::TakeI64 => p.take_number().map(|v| ParseToken::I64(v)),
           BldOps::TakeI64s => Some(ParseToken::I64s(p.numbers())),
-          BldOps::TakeUSize => Some(ParseToken::Usize(p.take_number().unwrap())),
+          BldOps::TakeUSize => p.take_number().map(|v| ParseToken::Usize(v)),
           BldOps::TakeUSizes => Some(ParseToken::Usizes(p.numbers())),
+          BldOps::Segments(t, ops) => Some(ParseToken::Segments(p.take_segments(t, ops))),
           BldOps::ConsumeWhitespace => {
             p.consume_whitespace();
             None
-          },
+          }
           BldOps::Consume(t) => {
             p.consume(t);
             None

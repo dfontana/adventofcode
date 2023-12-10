@@ -12,7 +12,7 @@ import_aoc_solutions!();
 
 fn main() -> Result<(), Box<dyn Error>> {
   tracing_subscriber::fmt()
-    .with_max_level(Level::from_str("INFO").unwrap())
+    .with_max_level(Level::from_str("DEBUG").unwrap())
     .with_target(false)
     .without_time()
     .init();

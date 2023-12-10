@@ -1,10 +1,11 @@
-use itertools::Itertools;
 use rust_util::Day;
 use std::{
   collections::{HashMap, HashSet},
   error::Error,
   fmt::Display,
 };
+
+use crate::tokens::Parser;
 
 #[derive(Debug)]
 pub struct Solve {
@@ -21,32 +22,24 @@ impl TryFrom<String> for Solve {
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
     Ok(Solve {
-      cards: value
-        .lines()
-        .map(|line| {
-          let (id, wins, nums) = line
-            .split_once(" | ")
-            .and_then(|(card, nums)| {
-              card
-                .strip_prefix("Card ")
-                .and_then(|c| c.split_once(": "))
-                .map(|(id, wins)| (id, wins, nums))
-            })
-            .unwrap();
-          let winners = wins
-            .split_whitespace()
-            .map(|n| n.parse::<usize>().unwrap())
-            .collect::<HashSet<usize>>();
-          let numbers = nums
-            .split_whitespace()
-            .map(|n| n.parse::<usize>().unwrap())
-            .collect::<HashSet<usize>>();
+      cards: Parser::new(&value)
+        .lines(
+          Parser::lazy()
+          .consume("Card")
+          .consume_whitespace()
+          .take_usize()
+          .consume(":")
+          .take_usizes()
+          .consume("|")
+          .take_usizes()
+        )
+        .map(|(id,wins,nums): (usize, HashSet<usize>, HashSet<usize>)| {
           Card {
-            id: id.trim().parse::<usize>().unwrap(),
-            matching: numbers.intersection(&winners).count(),
+            id,
+            matching: nums.intersection(&wins).count(),
           }
         })
-        .collect_vec(),
+        .collect(),
     })
   }
 }
