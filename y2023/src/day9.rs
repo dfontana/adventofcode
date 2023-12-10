@@ -3,6 +3,7 @@ use itertools::Itertools;
 use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
+#[derive(Debug)]
 pub struct Solve {
   firsts: Vec<Vec<i64>>,
   lasts: Vec<Vec<i64>>,
@@ -12,9 +13,8 @@ impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let (firsts, lasts) = value
-      .lines()
-      .map(|s| Parser::new(s).numbers::<i64>())
+    let (firsts, lasts) = Parser::new(&value)
+      .lines(Parser::lazy().take_i64s())
       .map(Solve::ends_diffs)
       .fold((Vec::new(), Vec::new()), |(mut afs, mut als), (fs, ls)| {
         afs.push(fs);

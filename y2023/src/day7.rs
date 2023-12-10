@@ -2,9 +2,11 @@ use itertools::Itertools;
 use rust_util::Day;
 use std::{cmp::Ordering, error::Error, fmt::Display};
 
+use crate::tokens::Parser;
+
 #[derive(Debug)]
 pub struct Solve {
-  input: Vec<(String, String)>,
+  input: Vec<(String, usize)>,
 }
 
 #[derive(Debug, Eq, Ord)]
@@ -72,10 +74,12 @@ impl TryFrom<String> for Solve {
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
     Ok(Solve {
-      input: value
-        .lines()
-        .filter_map(|s| s.split_once(" "))
-        .map(|(h, b)| (h.to_string(), b.to_string()))
+      input: Parser::new(&value)
+        .lines(
+          Parser::lazy()
+          .take_non_whitespace()
+          .take_usize()
+        )
         .collect(),
     })
   }
@@ -157,7 +161,7 @@ impl Solve {
         Hand {
           typ: HandType::from(&cards),
           cards,
-          bid: bid.parse().unwrap(),
+          bid: *bid,
         }
       })
       .sorted()

@@ -1,5 +1,50 @@
 use std::{collections::VecDeque, marker::PhantomData, str::FromStr};
 
+
+impl FromParser<(String, usize)> for (String, usize) {
+  fn from_parse(vec: Vec<ParseToken>) -> (String, usize) {
+    if vec.len() != 2 {
+      panic!("Parsed more than 2 tokens, can't make tuple2");
+    }
+    (vec[0].as_string(), vec[1].as_usize())
+  }
+}
+
+impl FromParser<(String, String, String)> for (String, String, String) {
+  fn from_parse(vec: Vec<ParseToken>) -> (String, String, String) {
+    if vec.len() != 3 {
+      panic!("Parsed more than 3 tokens, can't make tuple3");
+    }
+    (vec[0].as_string(), vec[1].as_string(), vec[2].as_string())
+  }
+}
+
+impl FromParser<Vec<i64>> for Vec<i64> {
+  fn from_parse(value: Vec<ParseToken>) -> Vec<i64> {
+    value
+      .iter()
+      .flat_map(|v| match v {
+        ParseToken::I64s(i) => i.to_owned(),
+        ParseToken::I64(i) => vec![*i],
+        _ => panic!("Attempted to collect non-i64 value"),
+      })
+      .collect()
+  }
+}
+
+impl FromParser<Vec<usize>> for Vec<usize> {
+  fn from_parse(value: Vec<ParseToken>) -> Vec<usize> {
+    value
+      .iter()
+      .flat_map(|v| match v {
+        ParseToken::Usizes(i) => i.to_owned(),
+        ParseToken::Usize(i) => vec![*i],
+        _ => panic!("Attempted to collect non-usize value"),
+      })
+      .collect()
+  }
+}
+
 pub struct Parser {
   buffer: Vec<char>,
   index: usize,
@@ -26,9 +71,6 @@ impl Parser {
       s.push(*c);
       self.index += 1;
     }
-    while let Some(_) = self.buffer.get(self.index).filter(|c| c.is_whitespace()) {
-      self.index += 1;
-    }
     s
   }
 
@@ -38,7 +80,8 @@ impl Parser {
       s.push(*c);
       self.index += 1;
     }
-    Some(s).filter(String::is_empty)
+    self.index += 1;
+    Some(s).filter(|s| !s.is_empty())
   }
 
   fn take_until(&mut self, token: &str) -> String {
@@ -67,6 +110,12 @@ impl Parser {
 
   fn consume(&mut self, token: &str) {
     self.take_until(token);
+  }
+
+  fn consume_whitespace(&mut self) {
+    while let Some(_) = self.buffer.get(self.index).filter(|c| c.is_whitespace()) {
+      self.index += 1;
+    }
   }
 
   pub fn take_number<T: FromStr>(&mut self) -> Option<T> {
@@ -105,31 +154,44 @@ impl Parser {
 pub trait FromParser<T> {
   fn from_parse(value: Vec<ParseToken>) -> T;
 }
-impl FromParser<(String, String, String)> for (String, String, String) {
-  fn from_parse(vec: Vec<ParseToken>) -> (String, String, String) {
-    if vec.len() != 3 {
-      panic!("Parsed more than 3 tokens, can't make tuple3");
-    }
-
-    (vec[0].as_string(), vec[1].as_string(), vec[2].as_string())
-  }
-}
 
 pub enum ParseToken {
   String(String),
-  Number(i64),
+  I64(i64),
+  I64s(Vec<i64>),
+  Usize(usize),
+  Usizes(Vec<usize>),
 }
 impl ParseToken {
   pub fn as_string(&self) -> String {
-    todo!();
+    match self {
+      ParseToken::String(s) => s.to_owned(),
+      _ => panic!("Not a String type"),
+    }
+  }
+  pub fn as_usize(&self) -> usize {
+    match self {
+      ParseToken::Usize(s) => s.to_owned(),
+      _ => panic!("Not a usize type"),
+    }
+  }
+  pub fn as_i64(&self) -> i64 {
+    match self {
+      ParseToken::I64(s) => s.to_owned(),
+      _ => panic!("Not a usize type"),
+    }
   }
 }
 
 #[derive(Clone)]
 enum BldOps {
   TakeUntil(String),
-  TakeUntilWhitespace,
-  TakeNumber(T),
+  ConsumeWhitespace,
+  TakeNonWhitespace,
+  TakeI64,
+  TakeI64s,
+  TakeUSize,
+  TakeUSizes,
   Consume(String),
 }
 
@@ -156,8 +218,13 @@ impl LineParseBuilder {
     self
   }
 
-  pub fn take_until_whitespace(&mut self) -> &mut Self {
-    self.ops.push(BldOps::TakeUntilWhitespace);
+  pub fn consume_whitespace(&mut self) -> &mut Self {
+    self.ops.push(BldOps::ConsumeWhitespace);
+    self
+  }
+
+  pub fn take_non_whitespace(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeNonWhitespace);
     self
   }
 
@@ -166,8 +233,18 @@ impl LineParseBuilder {
     self
   }
 
+  pub fn take_i64s(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeI64s);
+    self
+  }
+
   pub fn take_usize(&mut self) -> &mut Self {
     self.ops.push(BldOps::TakeUSize);
+    self
+  }
+
+  pub fn take_usizes(&mut self) -> &mut Self {
+    self.ops.push(BldOps::TakeUSizes);
     self
   }
 
@@ -187,8 +264,15 @@ impl LineParseBuilder {
         .iter()
         .filter_map(|op| match op {
           BldOps::TakeUntil(t) => Some(ParseToken::String(p.take_until(t))),
-          BldOps::TakeUntilWhitespace => Some(ParseToken::String(p.take_until_whitespace())),
-          BldOps::TakeNumber => Some(ParseToken::Number(p.take_number().unwrap())),
+          BldOps::TakeNonWhitespace => Some(ParseToken::String(p.take_until_whitespace())),
+          BldOps::TakeI64 => Some(ParseToken::I64(p.take_number().unwrap())),
+          BldOps::TakeI64s => Some(ParseToken::I64s(p.numbers())),
+          BldOps::TakeUSize => Some(ParseToken::Usize(p.take_number().unwrap())),
+          BldOps::TakeUSizes => Some(ParseToken::Usizes(p.numbers())),
+          BldOps::ConsumeWhitespace => {
+            p.consume_whitespace();
+            None
+          },
           BldOps::Consume(t) => {
             p.consume(t);
             None
