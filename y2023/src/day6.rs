@@ -2,6 +2,8 @@ use itertools::Itertools;
 use rust_util::Day;
 use std::{error::Error, fmt::Display};
 
+use crate::tokens::Parser;
+
 #[derive(Debug)]
 pub struct Solve {
   races: Vec<Race>,
@@ -18,35 +20,32 @@ impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let (times, dists) = value
-      .split_once("\n")
-      .map(|(t, d)| {
-        (
-          t.strip_prefix("Time:").unwrap(),
-          d.strip_prefix("Distance:").unwrap(),
-        )
-      })
-      .unwrap();
+    let (times, dists) = Parser::lazy()
+      .consume("Time:")
+      .take_usizes()
+      .consume_whitespace()
+      .consume("Distance:")
+      .take_usizes()
+      .apply::<(Vec<usize>, Vec<usize>)>(&value);
 
+    println!("{:?}", times);
+    println!("{:?}", dists);
     Ok(Solve {
       races: times
-        .split_whitespace()
-        .map(|n| n.parse::<usize>().unwrap())
-        .zip(
-          dists
-            .split_whitespace()
-            .map(|n| n.parse::<usize>().unwrap()),
-        )
-        .map(|(time, distance): (usize, usize)| Race { time, distance })
+        .iter()
+        .zip(dists.iter())
+        .map(|(t, d)| Race { time: *t, distance: *d })
         .collect_vec(),
       big_race: Race {
         time: times
-          .split_whitespace()
+          .iter()
+          .map(|t| t.to_string())
           .collect::<String>()
           .parse::<usize>()
           .unwrap(),
         distance: dists
-          .split_whitespace()
+          .iter()
+          .map(|t| t.to_string())
           .collect::<String>()
           .parse::<usize>()
           .unwrap(),

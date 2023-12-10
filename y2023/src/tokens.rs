@@ -1,5 +1,7 @@
-use std::{collections::VecDeque, marker::PhantomData, str::FromStr};
+#![allow(dead_code)]
+use std::{collections::VecDeque, marker::PhantomData, str::FromStr, fmt::Debug};
 
+use tracing::debug;
 
 impl FromParser<(String, usize)> for (String, usize) {
   fn from_parse(vec: Vec<ParseToken>) -> (String, usize) {
@@ -45,6 +47,15 @@ impl FromParser<Vec<usize>> for Vec<usize> {
   }
 }
 
+impl FromParser<(Vec<usize>, Vec<usize>)> for (Vec<usize>, Vec<usize>) {
+  fn from_parse(value: Vec<ParseToken>) -> (Vec<usize>, Vec<usize>) {
+    if value.len() != 2 {
+      panic!("Parsed more than 2 tokens, can't make tuple2");
+    }
+    (value[0].as_usizes(), value[1].as_usizes())
+  }
+}
+
 pub struct Parser {
   buffer: Vec<char>,
   index: usize,
@@ -62,11 +73,8 @@ impl Parser {
     LineParseBuilder::new()
   }
 
-  fn take_until_whitespace(&mut self) -> String {
+  pub fn take_until_whitespace(&mut self) -> String {
     let mut s = String::new();
-    while let Some(_) = self.buffer.get(self.index).filter(|c| c.is_whitespace()) {
-      self.index += 1;
-    }
     while let Some(c) = self.buffer.get(self.index).filter(|c| !c.is_whitespace()) {
       s.push(*c);
       self.index += 1;
@@ -74,7 +82,16 @@ impl Parser {
     s
   }
 
-  fn take_until_newline(&mut self) -> Option<String> {
+  pub fn take_until_not_digit(&mut self) -> String {
+    let mut s = String::new();
+    while let Some(c) = self.buffer.get(self.index).filter(|c| c.is_digit(10) || **c == '-') {
+      s.push(*c);
+      self.index += 1;
+    }
+    s
+  }
+  
+  pub fn take_until_newline(&mut self) -> Option<String> {
     let mut s = String::new();
     while let Some(c) = self.buffer.get(self.index).filter(|c| **c != '\n') {
       s.push(*c);
@@ -84,7 +101,7 @@ impl Parser {
     Some(s).filter(|s| !s.is_empty())
   }
 
-  fn take_until(&mut self, token: &str) -> String {
+  pub fn take_until(&mut self, token: &str) -> String {
     let mut to_find: VecDeque<char> = token.chars().collect();
     let mut buf = String::new();
     let mut s = String::new();
@@ -108,25 +125,30 @@ impl Parser {
     s
   }
 
-  fn consume(&mut self, token: &str) {
+  pub fn consume(&mut self, token: &str) {
     self.take_until(token);
+    debug!("Consumed: {:?} -> {:?}", token, &self.buffer[self.index..]);
   }
 
-  fn consume_whitespace(&mut self) {
+  pub fn consume_whitespace(&mut self) {
     while let Some(_) = self.buffer.get(self.index).filter(|c| c.is_whitespace()) {
       self.index += 1;
     }
+    debug!("Consumed Whitespace -> {:?}", &self.buffer[self.index..]);
   }
 
   pub fn take_number<T: FromStr>(&mut self) -> Option<T> {
-    self.take_until_whitespace().parse::<T>().ok()
+    self.consume_whitespace();
+    self.take_until_not_digit().parse::<T>().ok()
   }
 
-  pub fn numbers<T: FromStr>(&mut self) -> Vec<T> {
+  pub fn numbers<T: FromStr + Debug>(&mut self) -> Vec<T> {
     let mut v = Vec::new();
     while let Some(n) = self.take_number::<T>() {
+    debug!("Took num: {:?} -> {:?}", n, &self.buffer[self.index..]);
       v.push(n);
     }
+    debug!("All Nums Consumed: {:?}",&self.buffer[self.index..]);
     v
   }
 
@@ -175,10 +197,22 @@ impl ParseToken {
       _ => panic!("Not a usize type"),
     }
   }
+  pub fn as_usizes(&self) -> Vec<usize> {
+    match self {
+      ParseToken::Usizes(s) => s.to_owned(),
+      _ => panic!("Not a Vec<usize> type"),
+    }
+  }
   pub fn as_i64(&self) -> i64 {
     match self {
       ParseToken::I64(s) => s.to_owned(),
-      _ => panic!("Not a usize type"),
+      _ => panic!("Not a i64 type"),
+    }
+  }
+  pub fn as_i64s(&self) -> Vec<i64> {
+    match self {
+      ParseToken::I64s(s) => s.to_owned(),
+      _ => panic!("Not a Vec<i64> type"),
     }
   }
 }
