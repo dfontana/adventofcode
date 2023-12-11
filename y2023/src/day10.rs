@@ -48,12 +48,12 @@ enum Dir {
 
 #[derive(Debug, PartialEq, Eq)]
 enum Pipe {
-  VERT, // North-South
-  HORZ, // East-West
-  NE90, // North-East
-  SE90, // South-East
-  NW90, // North-West
-  SW90, // South-West
+  VERT,
+  HORZ,
+  NE90,
+  SE90,
+  NW90,
+  SW90,
   Blank,
   Start,
 }
@@ -83,18 +83,18 @@ impl Pipe {
       (Pipe::HORZ, Pipe::Start | Pipe::HORZ, Dir::West | Dir::East) => true,
       (Pipe::HORZ, Pipe::NE90 | Pipe::SE90, Dir::West) => true,
       (Pipe::HORZ, Pipe::NW90 | Pipe::SW90, Dir::East) => true,
+      (Pipe::NE90, Pipe::Start | Pipe::SW90, Dir::North | Dir::East) => true,
       (Pipe::NE90, Pipe::VERT | Pipe::SE90, Dir::North) => true,
       (Pipe::NE90, Pipe::HORZ | Pipe::NW90, Dir::East) => true,
-      (Pipe::NE90, Pipe::Start | Pipe::SW90, Dir::North | Dir::East) => true,
+      (Pipe::SE90, Pipe::Start | Pipe::NW90, Dir::East | Dir::South) => true,
       (Pipe::SE90, Pipe::VERT | Pipe::NE90, Dir::South) => true,
       (Pipe::SE90, Pipe::HORZ | Pipe::SW90, Dir::East) => true,
-      (Pipe::SE90, Pipe::Start | Pipe::NW90, Dir::East | Dir::South) => true,
+      (Pipe::NW90, Pipe::Start | Pipe::SE90, Dir::North | Dir::West) => true,
       (Pipe::NW90, Pipe::VERT | Pipe::SW90, Dir::North) => true,
       (Pipe::NW90, Pipe::HORZ | Pipe::NE90, Dir::West) => true,
-      (Pipe::NW90, Pipe::Start | Pipe::SE90, Dir::North | Dir::West) => true,
+      (Pipe::SW90, Pipe::Start | Pipe::NE90, Dir::South | Dir::West) => true,
       (Pipe::SW90, Pipe::VERT | Pipe::NW90, Dir::South) => true,
       (Pipe::SW90, Pipe::HORZ | Pipe::SE90, Dir::West) => true,
-      (Pipe::SW90, Pipe::Start | Pipe::NE90, Dir::South | Dir::West) => true,
       (Pipe::Start, Pipe::VERT | Pipe::SE90 | Pipe::SW90, Dir::North) => true,
       (Pipe::Start, Pipe::VERT | Pipe::NE90 | Pipe::NW90, Dir::South) => true,
       (Pipe::Start, Pipe::HORZ | Pipe::NW90 | Pipe::SW90, Dir::East) => true,
@@ -130,23 +130,21 @@ impl TryFrom<String> for Solve {
 
     let mut graph: HashMap<(usize, usize), Adj> = HashMap::new();
     for ((x, y), p) in nodes.iter() {
-      for (maybe_dloc, dir) in vec![
-        (Some((x + 1, *y)), Dir::East),
-        (y.checked_sub(1).map(|y| (*x, y)), Dir::North),
-        (Some((*x, y + 1)), Dir::South),
-        (x.checked_sub(1).map(|x| (x, *y)), Dir::West),
+      for (dloc, dir) in vec![
+        ((x + 1, *y), Dir::East),
+        ((*x, y - 1), Dir::North),
+        ((*x, y + 1), Dir::South),
+        ((x - 1, *y), Dir::West),
       ] {
-        if let Some(dloc) = maybe_dloc {
-          if let Some(_) = nodes.get(&dloc).filter(|pi| p.can_connect(pi, &dir)) {
-            graph
-              .entry((*x, *y))
-              .and_modify(|adj| adj.update(&dir, dloc))
-              .or_insert_with(|| {
-                let mut adj = Adj::new();
-                adj.update(&dir, dloc);
-                adj
-              });
-          }
+        if let Some(_) = nodes.get(&dloc).filter(|pi| p.can_connect(pi, &dir)) {
+          graph
+            .entry((*x, *y))
+            .and_modify(|adj| adj.update(&dir, dloc))
+            .or_insert_with(|| {
+              let mut adj = Adj::new();
+              adj.update(&dir, dloc);
+              adj
+            });
         }
       }
     }
