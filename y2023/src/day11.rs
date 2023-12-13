@@ -4,7 +4,8 @@ use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub struct Solve {
-  input: Vec<(usize, usize)>,
+  gp1: Vec<(usize, usize)>,
+  gp2: Vec<(usize, usize)>,
 }
 
 impl TryFrom<String> for Solve {
@@ -13,64 +14,65 @@ impl TryFrom<String> for Solve {
   fn try_from(value: String) -> Result<Self, Self::Error> {
     let len = value.lines().next().unwrap().len();
 
-    let mut expanded: Vec<Vec<char>> = Vec::new();
+    let mut gp1: Vec<(usize, usize)> = Vec::new();
+    let mut gp2: Vec<(usize, usize)> = Vec::new();
 
-    // Find the blanks and init our expanded vector
     let mut blank_cols = vec![true; len];
-    for line in value.lines() {
-      expanded.push(line.chars().collect_vec());
+    let mut y_basis_p1 = 0;
+    let mut y_basis_p2 = 0;
+    for (y, line) in value.lines().enumerate() {
       let galaxy_idxs = line
         .chars()
         .enumerate()
         .filter_map(|(idx, char)| if char == '#' { Some(idx) } else { None })
         .collect_vec();
       if galaxy_idxs.is_empty() {
-        expanded.push(vec!['.'; len]);
-      }
-      for idx in galaxy_idxs {
-        blank_cols[idx] = false;
-      }
-    }
-
-    // expand the columns now
-    for row in expanded.iter_mut() {
-      for (idx, _) in blank_cols.iter().enumerate().filter(|v| *v.1).rev() {
-        // Reverse so we don't shift the original idx's wrongly
-        row.insert(idx, '.');
+        y_basis_p1 += 1;
+        y_basis_p2 += 1_000_000;
+      } else {
+        for x in galaxy_idxs {
+          blank_cols[x] = false;
+          gp1.push((y + y_basis_p1, x));
+          gp2.push((y + y_basis_p2, x));
+        }
       }
     }
 
-    // Now scan for galaxies and get their coords as our input
-    let input = expanded
-      .iter()
-      .enumerate()
-      .flat_map(|(y, row)| {
-        row
-          .iter()
-          .enumerate()
-          .filter_map(|(x, char)| if *char == '#' { Some((y, x)) } else { None })
-          .collect_vec()
-      })
-      .collect_vec();
+    let x_to_expand =  blank_cols.iter().enumerate().filter_map(|v| if *v.1 { Some(v.0)} else {None}).collect_vec();
 
-    Ok(Solve { input })
+    for g in gp1.iter_mut() {
+      let num_expands_before = x_to_expand.iter().filter(|v| **v < g.1).collect_vec().len();
+      g.1 +=1*num_expands_before;
+    }
+
+    for g in gp2.iter_mut() {
+      let num_expands_before = x_to_expand.iter().filter(|v| **v < g.1).collect_vec().len();
+      g.1 +=1_000_000*num_expands_before;
+    }
+    Ok(Solve { gp1, gp2 })
+  }
+}
+
+impl Solve {
+  fn m_dist(&self, input: &Vec<(usize, usize)>) -> usize {
+   let mut total: usize = 0;
+    for i in 0..input.len() {
+      let (ay, ax) = input[i];
+      for j in i..input.len() {
+        let (by, bx) = input[j];
+        total += ax.abs_diff(bx) + ay.abs_diff(by);
+      }
+    }
+    total
   }
 }
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut total: usize = 0;
-    for i in 0..self.input.len() {
-      let (ay, ax) = self.input[i];
-      for j in i..self.input.len() {
-        let (by, bx) = self.input[j];
-        total += ax.abs_diff(bx) + ay.abs_diff(by);
-      }
-    }
-    Ok(Box::new(total))
+    Ok(Box::new(self.m_dist(&self.gp1)))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(self.m_dist(&self.gp2)))
   }
 }
