@@ -1,18 +1,125 @@
 use itertools::Itertools;
 use rust_util::Day;
-use std::{collections::HashSet, error::Error, fmt::Display};
+use std::{collections::VecDeque, error::Error, fmt::Display};
 
-pub struct Solve {
-  input: Vec<String>,
+impl From<&str> for Operation {
+  fn from(value: &str) -> Self {
+    if let Some((lbl, len)) = value.split_once('=') {
+      return Operation::Add(Focal {
+        lbl: lbl.to_string(),
+        len: len.parse::<u8>().unwrap(),
+      });
+    }
+    value
+      .strip_suffix('-')
+      .map(|lbl| Operation::Remove {
+        lbl: lbl.to_string(),
+      })
+      .unwrap()
+  }
 }
 
+impl From<&Operation> for String {
+  fn from(value: &Operation) -> Self {
+    match value {
+      Operation::Add(Focal { lbl, len }) => format!("{}={}", lbl, len),
+      Operation::Remove { lbl } => format!("{}-", lbl),
+    }
+  }
+}
+
+impl Display for HASHMAP {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    for (id, bx) in self.boxes.iter().enumerate() {
+      if bx.len() > 0 {
+        let box_str: String = bx
+          .iter()
+          .map(|s| format!("[{} {}]", s.lbl, s.len))
+          .intersperse(" ".to_string())
+          .collect();
+        writeln!(f, "Box {:0>3}: {}", id, box_str)?;
+      }
+    }
+    Ok(())
+  }
+}
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
     Ok(Solve {
-      input: value.trim().split(',').map(|s| s.to_string()).collect(),
+      input: value.trim().split(',').map(Operation::from).collect(),
     })
+  }
+}
+
+pub struct Solve {
+  input: Vec<Operation>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct Focal {
+  lbl: String,
+  len: u8,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+enum Operation {
+  Add(Focal),
+  Remove { lbl: String },
+}
+
+struct HASHMAP {
+  boxes: Vec<VecDeque<Focal>>,
+}
+
+impl Default for HASHMAP {
+  fn default() -> Self {
+    HASHMAP {
+      boxes: vec![VecDeque::new(); 256],
+    }
+  }
+}
+
+impl HASHMAP {
+  fn operate(&mut self, op: &Operation) {
+    match op {
+      Operation::Add(f) => {
+        let idx = hash(&f.lbl);
+        let pos = self.boxes[idx].iter().find_position(|bo| bo.lbl == f.lbl);
+        match pos {
+          Some((i, _)) => {
+            self.boxes[idx][i] = f.clone();
+          }
+          None => {
+            self.boxes[idx].push_back(f.clone());
+          }
+        };
+      }
+      Operation::Remove { lbl } => {
+        let idx = hash(lbl);
+        let pos = self.boxes[idx].iter().find_position(|bo| bo.lbl == *lbl);
+        match pos {
+          Some((i, _)) => {
+            self.boxes[idx].remove(i);
+          }
+          None => {}
+        }
+      }
+    }
+  }
+
+  fn focusing_power(&self) -> usize {
+    self
+      .boxes
+      .iter()
+      .enumerate()
+      .flat_map(|(box_num, bx)| {
+        bx.iter()
+          .enumerate()
+          .map(move |(slot_num, focal)| (1 + box_num) * (1 + slot_num) * focal.len as usize)
+      })
+      .sum()
   }
 }
 
@@ -24,25 +131,30 @@ fn hash(s: &str) -> usize {
 
 impl Solve {
   fn vet_code(&self) -> usize {
-    self.input.iter().map(|s| hash(s)).sum()
+    self
+      .input
+      .iter()
+      .map(|op| {
+        let s: String = op.into();
+        hash(&s)
+      })
+      .sum()
+  }
+
+  fn to_map(&self) -> HASHMAP {
+    let mut map = HASHMAP::default();
+    self.input.iter().for_each(|op| map.operate(op));
+    map
   }
 }
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut dis = HashSet::new();
-    for v in self.input.iter() {
-      v.chars().for_each(|c| {
-        dis.insert(c);
-      });
-      println!("{:?}", v);
-    }
-    println!("{:?}", dis);
     Ok(Box::new(self.vet_code()))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(self.to_map().focusing_power()))
   }
 }
 
