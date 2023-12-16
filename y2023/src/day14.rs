@@ -1,37 +1,35 @@
 use itertools::Itertools;
 use rust_util::Day;
-use std::{error::Error, fmt::Display};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub struct Solve {
-  round: Vec<(usize, usize)>,
-  board: Vec<Vec<Tile>>,
-  y_max: usize,
+  grid: Grid,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum Tile {
   Round,
   Blank,
   Square,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct Grid {
+  board: Vec<Vec<Tile>>,
+  y_max: usize,
+}
+
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let mut round = Vec::new();
     let board = value
       .lines()
-      .enumerate()
-      .map(|(y, l)| {
+      .map(|l| {
         l.chars()
-          .enumerate()
-          .map(|(x, c)| match c {
-            'O' => {
-              round.push((x, y));
-              Tile::Round
-            }
+          .map(|c| match c {
+            'O' => Tile::Round,
             '.' => Tile::Blank,
             '#' => Tile::Square,
             _ => unreachable!(),
@@ -40,62 +38,105 @@ impl TryFrom<String> for Solve {
       })
       .collect_vec();
     Ok(Solve {
-      round,
-      y_max: board.len(),
-      board,
+      grid: Grid {
+        y_max: board.len(),
+        board,
+      },
     })
   }
 }
 
-fn shift_north(v: &mut Vec<Vec<Tile>>, bldrs: &mut Vec<(usize, usize)>) {
-  for (x, dy) in bldrs.iter_mut().sorted() {
-    loop {
-      if *dy == 0 {
-        break;
-      }
-
-      if v[*dy - 1][*x] == Tile::Round || v[*dy - 1][*x] == Tile::Square {
-        break;
-      }
-
-      v[*dy][*x] = Tile::Blank;
-      v[*dy - 1][*x] = Tile::Round;
-      *dy -= 1;
+fn find_cycle(g: &mut Grid, max: isize) -> (isize, isize, HashMap<Grid, isize>) {
+  let mut seen = HashMap::new();
+  seen.insert(g.clone(), 0);
+  let mut i = 1;
+  loop {
+    cycle_one(g);
+    if seen.contains_key(&g) || i == max {
+      return (*seen.get(&g).unwrap(), i - seen.get(&g).unwrap(), seen);
     }
+    seen.insert(g.clone(), i);
+    i += 1;
   }
 }
 
-fn debug_brd(v: &Vec<Vec<Tile>>) {
-  for r in v {
-    for t in r {
-      print!(
-        "{}",
-        match t {
-          Tile::Round => 'O',
-          Tile::Blank => '.',
-          Tile::Square => '#',
+fn total_load(board: &Vec<Vec<Tile>>, y_max: usize) -> usize {
+  board
+    .iter()
+    .enumerate()
+    .flat_map(|(y, v)| {
+      v.iter().filter_map(move |t| match t {
+        Tile::Round => Some(y),
+        _ => None,
+      })
+    })
+    .map(|y| y_max - y)
+    .reduce(|acc, y| acc + y)
+    .unwrap()
+}
+
+impl Grid {
+  fn rot90(&mut self) -> &mut Self {
+    self.board = (0..self.board[0].len())
+      .map(|i| {
+        self
+          .board
+          .iter()
+          .map(|inner| inner[i].clone())
+          .rev()
+          .collect::<Vec<_>>()
+      })
+      .collect();
+    self
+  }
+}
+
+fn cycle_one(g: &mut Grid) {
+  g.rot90();
+  g.rot90();
+  g.rot90();
+  shift(g);
+  shift(g.rot90());
+  shift(g.rot90());
+  shift(g.rot90());
+  g.rot90();
+  g.rot90();
+}
+
+fn shift(g: &mut Grid) {
+  for row in g.board.iter_mut() {
+    let mut left_most = 0;
+    for x in 0..row.len() {
+      match row[x] {
+        Tile::Round => {
+          row[x] = Tile::Blank;
+          row[left_most] = Tile::Round;
+          left_most += 1;
         }
-      );
+        Tile::Square => {
+          left_most = x + 1;
+        }
+        Tile::Blank => {}
+      }
     }
-    println!();
   }
 }
-
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut tiles = self.board.clone();
-    let mut round = self.round.clone();
-    shift_north(&mut tiles, &mut round);
-    Ok(Box::new(format!(
-      "{:?}",
-      round
-        .iter()
-        .map(|(_, y)| { self.y_max - *y })
-        .reduce(|acc, y| acc + y)
-    )))
+    let mut g = self.grid.clone();
+    g.rot90();
+    g.rot90();
+    g.rot90();
+    shift(&mut g);
+    g.rot90();
+    Ok(Box::new(total_load(&g.board, g.y_max)))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    let max = 1_000_000_000;
+    let (start, period, grids) = find_cycle(&mut self.grid.clone(), max);
+    let inverted: HashMap<_, _> = grids.iter().map(|(k, v)| (v, k)).collect();
+    let end = inverted.get(&(start + (max - start) % period)).unwrap();
+    Ok(Box::new(total_load(&end.board, end.y_max)))
   }
 }
