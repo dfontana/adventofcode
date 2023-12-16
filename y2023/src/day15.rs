@@ -28,21 +28,6 @@ impl From<&Operation> for String {
   }
 }
 
-impl Display for HASHMAP {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    for (id, bx) in self.boxes.iter().enumerate() {
-      if bx.len() > 0 {
-        let box_str: String = bx
-          .iter()
-          .map(|s| format!("[{} {}]", s.lbl, s.len))
-          .intersperse(" ".to_string())
-          .collect();
-        writeln!(f, "Box {:0>3}: {}", id, box_str)?;
-      }
-    }
-    Ok(())
-  }
-}
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
@@ -58,15 +43,15 @@ pub struct Solve {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Focal {
-  lbl: String,
-  len: u8,
-}
-
-#[derive(Clone, PartialEq, Eq)]
 enum Operation {
   Add(Focal),
   Remove { lbl: String },
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct Focal {
+  lbl: String,
+  len: u8,
 }
 
 struct HASHMAP {
