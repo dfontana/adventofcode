@@ -64,15 +64,19 @@ impl TryFrom<String> for Solve {
 }
 
 impl Dir {
-  fn next(&self, (x, y): (usize, usize), x_max: usize, y_max: usize) -> Option<(usize, usize)> {
-    // TODO needs OOB checking
-    match self {
-      Dir::L => (x + 1, y),
-      Dir::R => (x - 1, y),
-      Dir::U => (x, y - 1),
-      Dir::D => (x, y + 1),
+  fn next(
+    &self,
+    (x, y): (usize, usize),
+    x_max: usize,
+    y_max: usize,
+  ) -> Option<((usize, usize), Dir)> {
+    let loc = match self {
+      Dir::R => Some(x + 1).filter(|x| *x < x_max).map(|x| (x, y)),
+      Dir::L => x.checked_sub(1).map(|x| (x, y)),
+      Dir::U => y.checked_sub(1).map(|y| (x, y)),
+      Dir::D => Some(y + 1).filter(|y| *y < y_max).map(|y| (x, y)),
     };
-    todo!()
+    loc.map(|l| (l, self.clone()))
   }
 }
 
@@ -84,157 +88,47 @@ impl Tile {
     x_max: usize,
     y_max: usize,
   ) -> Vec<((usize, usize), Dir)> {
-    // TODO surly we can reduce the branching going on here, but maybe get a working thing first
-    match self {
-      Tile::SplitV => todo!(),
-      Tile::SplitH => match from_dir {
-        Dir::L | Dir::R => {
-          if let Some(e) = from_dir.next(from, x_max, y_max) {
-            vec![(e, from_dir)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::U => todo!(),
-        Dir::D => {
-          let mut es = Vec::new();
-          if let Some(e) = Dir::L.next(from, x_max, y_max) {
-            es.push((e, Dir::L));
-          }
-          if let Some(e) = Dir::R.next(from, x_max, y_max) {
-            es.push((e, Dir::R));
-          }
-          es
-        }
-      },
-      Tile::MirrorL => match from_dir {
-        // => /
-        Dir::L => {
-          if let Some(e) = Dir::U.next(from, x_max, y_max) {
-            vec![(e, Dir::U)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::R => {
-          if let Some(e) = Dir::D.next(from, x_max, y_max) {
-            vec![(e, Dir::D)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::U => {
-          if let Some(e) = Dir::L.next(from, x_max, y_max) {
-            vec![(e, Dir::L)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::D => {
-          if let Some(e) = Dir::R.next(from, x_max, y_max) {
-            vec![(e, Dir::R)]
-          } else {
-            vec![]
-          }
-        }
-      },
-      Tile::MirrorR => match from_dir {
-        // => \
-        Dir::L => {
-          if let Some(e) = Dir::D.next(from, x_max, y_max) {
-            vec![(e, Dir::D)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::R => {
-          if let Some(e) = Dir::U.next(from, x_max, y_max) {
-            vec![(e, Dir::U)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::U => {
-          if let Some(e) = Dir::R.next(from, x_max, y_max) {
-            vec![(e, Dir::R)]
-          } else {
-            vec![]
-          }
-        }
-        Dir::D => {
-          if let Some(e) = Dir::L.next(from, x_max, y_max) {
-            vec![(e, Dir::L)]
-          } else {
-            vec![]
-          }
-        }
-      },
-      _ => vec![],
-    }
+    let dirs = match (self, &from_dir) {
+      (Tile::Blank, _) | (Tile::SplitV, Dir::D | Dir::U) | (Tile::SplitH, Dir::L | Dir::R) => {
+        vec![from_dir]
+      }
+      (Tile::SplitV, Dir::L | Dir::R) => vec![Dir::D, Dir::U],
+      (Tile::SplitH, Dir::D | Dir::U) => vec![Dir::L, Dir::R],
+      (Tile::MirrorL, Dir::R) | (Tile::MirrorR, Dir::L) => vec![Dir::U],
+      (Tile::MirrorL, Dir::L) | (Tile::MirrorR, Dir::R) => vec![Dir::D],
+      (Tile::MirrorL, Dir::D) | (Tile::MirrorR, Dir::U) => vec![Dir::L],
+      (Tile::MirrorL, Dir::U) | (Tile::MirrorR, Dir::D) => vec![Dir::R],
+    };
+    dirs
+      .iter()
+      .filter_map(|d| d.next(from, x_max, y_max))
+      .collect()
   }
 }
 
 impl Solve {
   fn energize(&self) -> Vec<Vec<TileState>> {
-    // Beam starts in top left and refracts until all ends out of bounds
-    // There will be cycles to detect. I don't think we can just check for
-    // energized state as we don't know the direction it was energized from.
-    // Perhaps energized state should track direction(s) beam came from &
-    // that would be enough to detect if we've covered it.
-    //
-    // Example: Two beams hitting a tile that energizes with diff results.
-    //
-    //   ---> \ <----
-
     let mut board = self.board.clone();
-    let mut seen: HashSet<((usize, usize), Dir)> = HashSet::new();
-    let mut edges: VecDeque<((usize, usize), Dir)> = VecDeque::new();
-    let edge = ((0, 0), Dir::R);
-    edges.push_front(edge.clone());
-    seen.insert(edge.clone());
-    energize(&mut board, (0, 0));
 
-    while let Some(edge) = edges.pop_front() {
-      let d = edge.1.clone();
+    let mut seen = HashSet::new();
+    let mut edges = vec![((0, 0), Dir::R)];
+    while let Some(edge) = edges.pop() {
+      if seen.contains(&edge) {
+        continue;
+      }
+      seen.insert(edge.clone());
 
-      // Travel one step in direction from loc
-      let next_loc: (usize, usize) = match d.next(edge.0, self.x_max, self.y_max) {
-        Some(loc) => loc,
-        None => continue,
-      };
-      let next = board[next_loc.1][next_loc.0].clone();
-      let next_t = match &next {
+      energize(&mut board, edge.0);
+
+      let t = match board[edge.0 .1][edge.0 .0].clone() {
         TileState::Energized(t) => t,
         TileState::Dormant(t) => t,
       };
-
-      // Cycle check
-      if let TileState::Energized(_) = next {
-        if seen.contains(&edge) {
-          continue;
-        } else {
-          seen.insert(edge.clone());
-        }
-      }
-
-      // Ensure next is energized
-      energize(&mut board, next_loc);
-
-      // Take action on this step
-      match next_t {
-        Tile::Blank => {
-          edges.push_back((next_loc, d.clone()));
-        }
-        _ => {
-          next_t
-            .refract(next_loc, d.clone(), self.x_max, self.y_max)
-            .iter()
-            .for_each(|edge| {
-              energize(&mut board, edge.0);
-              edges.push_back(edge.clone());
-            });
-        }
-      };
+      t.refract(edge.0, edge.1, self.x_max, self.y_max)
+        .iter()
+        .for_each(|edge| {
+          edges.push(edge.clone());
+        });
     }
     board
   }
@@ -247,6 +141,24 @@ fn energize(board: &mut Vec<Vec<TileState>>, (x, y): (usize, usize)) {
   };
   board[y][x] = TileState::Energized(t.clone());
 }
+
+// fn print(board: &Vec<Vec<TileState>>) {
+//   for b in board.iter() {
+//     for t in b.iter() {
+//       match t {
+//         TileState::Energized(_) => print!("#"),
+//         TileState::Dormant(t) => match t {
+//           Tile::SplitV => print!("|"),
+//           Tile::SplitH => print!("-"),
+//           Tile::MirrorL => print!("/"),
+//           Tile::MirrorR => print!("\\"),
+//           Tile::Blank => print!("."),
+//         },
+//       }
+//     }
+//     println!();
+//   }
+// }
 
 fn count_energized(b: &Vec<Vec<TileState>>) -> usize {
   b.iter()
