@@ -1,9 +1,5 @@
 use rust_util::Day;
-use std::{
-  collections::{HashSet, VecDeque},
-  error::Error,
-  fmt::Display,
-};
+use std::{collections::HashSet, error::Error, fmt::Display};
 
 pub struct Solve {
   x_max: usize,
@@ -71,9 +67,9 @@ impl Dir {
     y_max: usize,
   ) -> Option<((usize, usize), Dir)> {
     let loc = match self {
-      Dir::R => Some(x + 1).filter(|x| *x < x_max).map(|x| (x, y)),
       Dir::L => x.checked_sub(1).map(|x| (x, y)),
       Dir::U => y.checked_sub(1).map(|y| (x, y)),
+      Dir::R => Some(x + 1).filter(|x| *x < x_max).map(|x| (x, y)),
       Dir::D => Some(y + 1).filter(|y| *y < y_max).map(|y| (x, y)),
     };
     loc.map(|l| (l, self.clone()))
@@ -81,84 +77,61 @@ impl Dir {
 }
 
 impl Tile {
-  fn refract(
-    &self,
-    from: (usize, usize),
-    from_dir: Dir,
-    x_max: usize,
-    y_max: usize,
-  ) -> Vec<((usize, usize), Dir)> {
-    let dirs = match (self, &from_dir) {
-      (Tile::Blank, _) | (Tile::SplitV, Dir::D | Dir::U) | (Tile::SplitH, Dir::L | Dir::R) => {
-        vec![from_dir]
-      }
+  fn refract(&self, from_dir: Dir) -> Vec<Dir> {
+    match (self, &from_dir) {
+      (Tile::Blank, _) => vec![from_dir],
+      (Tile::SplitV, Dir::D | Dir::U) | (Tile::SplitH, Dir::L | Dir::R) => vec![from_dir],
       (Tile::SplitV, Dir::L | Dir::R) => vec![Dir::D, Dir::U],
       (Tile::SplitH, Dir::D | Dir::U) => vec![Dir::L, Dir::R],
       (Tile::MirrorL, Dir::R) | (Tile::MirrorR, Dir::L) => vec![Dir::U],
       (Tile::MirrorL, Dir::L) | (Tile::MirrorR, Dir::R) => vec![Dir::D],
       (Tile::MirrorL, Dir::D) | (Tile::MirrorR, Dir::U) => vec![Dir::L],
       (Tile::MirrorL, Dir::U) | (Tile::MirrorR, Dir::D) => vec![Dir::R],
-    };
-    dirs
-      .iter()
-      .filter_map(|d| d.next(from, x_max, y_max))
-      .collect()
+    }
   }
 }
 
 impl Solve {
-  fn energize(&self) -> Vec<Vec<TileState>> {
+  fn energize(&self, init: ((usize, usize), Dir)) -> Vec<Vec<TileState>> {
     let mut board = self.board.clone();
 
     let mut seen = HashSet::new();
-    let mut edges = vec![((0, 0), Dir::R)];
+    let mut edges = vec![init];
     while let Some(edge) = edges.pop() {
       if seen.contains(&edge) {
         continue;
       }
       seen.insert(edge.clone());
 
-      energize(&mut board, edge.0);
-
       let t = match board[edge.0 .1][edge.0 .0].clone() {
         TileState::Energized(t) => t,
         TileState::Dormant(t) => t,
       };
-      t.refract(edge.0, edge.1, self.x_max, self.y_max)
+      board[edge.0 .1][edge.0 .0] = TileState::Energized(t.clone());
+      t.refract(edge.1)
         .iter()
+        .filter_map(|d| d.next(edge.0, self.x_max, self.y_max))
         .for_each(|edge| {
           edges.push(edge.clone());
         });
     }
+
     board
   }
-}
 
-fn energize(board: &mut Vec<Vec<TileState>>, (x, y): (usize, usize)) {
-  let t = match &board[y][x] {
-    TileState::Energized(t) => t,
-    TileState::Dormant(t) => t,
-  };
-  board[y][x] = TileState::Energized(t.clone());
+  fn boarder(&self) -> Vec<((usize, usize), Dir)> {
+    let mut v = Vec::new();
+    for x in 0..self.x_max {
+      v.push(((x, 0), Dir::D));
+      v.push(((x, self.y_max - 1), Dir::U));
+    }
+    for y in 0..self.y_max {
+      v.push(((0, y), Dir::R));
+      v.push(((self.x_max - 1, y), Dir::L));
+    }
+    v
+  }
 }
-
-// fn print(board: &Vec<Vec<TileState>>) {
-//   for b in board.iter() {
-//     for t in b.iter() {
-//       match t {
-//         TileState::Energized(_) => print!("#"),
-//         TileState::Dormant(t) => match t {
-//           Tile::SplitV => print!("|"),
-//           Tile::SplitH => print!("-"),
-//           Tile::MirrorL => print!("/"),
-//           Tile::MirrorR => print!("\\"),
-//           Tile::Blank => print!("."),
-//         },
-//       }
-//     }
-//     println!();
-//   }
-// }
 
 fn count_energized(b: &Vec<Vec<TileState>>) -> usize {
   b.iter()
@@ -172,10 +145,18 @@ fn count_energized(b: &Vec<Vec<TileState>>) -> usize {
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(count_energized(&self.energize())))
+    Ok(Box::new(count_energized(&self.energize(((0, 0), Dir::R)))))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(format!(
+      "{:?}",
+      self
+        .boarder()
+        .iter()
+        .map(|e| self.energize(e.clone()))
+        .map(|b| count_energized(&b))
+        .max(),
+    )))
   }
 }
