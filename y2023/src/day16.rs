@@ -1,10 +1,11 @@
-use rust_util::Day;
+use rust_util::{
+  grid::{Dir, Grid},
+  Day,
+};
 use std::{collections::HashSet, error::Error, fmt::Display};
 
 pub struct Solve {
-  x_max: usize,
-  y_max: usize,
-  board: Vec<Vec<TileState>>,
+  grid: Grid<TileState>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,18 +17,34 @@ enum Tile {
   Blank,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum Dir {
-  L,
-  R,
-  U,
-  D,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum TileState {
   Energized(Tile),
   Dormant(Tile),
+}
+
+impl Display for Tile {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Tile::SplitV => "|",
+        Tile::SplitH => "-",
+        Tile::MirrorL => "/",
+        Tile::MirrorR => "\\",
+        Tile::Blank => ".",
+      }
+    )
+  }
+}
+impl Display for TileState {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      TileState::Energized(_) => write!(f, "#"),
+      TileState::Dormant(t) => write!(f, "{}", t),
+    }
+  }
 }
 
 impl TryFrom<String> for Solve {
@@ -52,27 +69,8 @@ impl TryFrom<String> for Solve {
       })
       .collect();
     Ok(Solve {
-      x_max: board[0].len(),
-      y_max: board.len(),
-      board,
+      grid: Grid::new(board),
     })
-  }
-}
-
-impl Dir {
-  fn next(
-    &self,
-    (x, y): (usize, usize),
-    x_max: usize,
-    y_max: usize,
-  ) -> Option<((usize, usize), Dir)> {
-    let loc = match self {
-      Dir::L => x.checked_sub(1).map(|x| (x, y)),
-      Dir::U => y.checked_sub(1).map(|y| (x, y)),
-      Dir::R => Some(x + 1).filter(|x| *x < x_max).map(|x| (x, y)),
-      Dir::D => Some(y + 1).filter(|y| *y < y_max).map(|y| (x, y)),
-    };
-    loc.map(|l| (l, self.clone()))
   }
 }
 
@@ -80,20 +78,21 @@ impl Tile {
   fn refract(&self, from_dir: Dir) -> Vec<Dir> {
     match (self, &from_dir) {
       (Tile::Blank, _) => vec![from_dir],
-      (Tile::SplitV, Dir::D | Dir::U) | (Tile::SplitH, Dir::L | Dir::R) => vec![from_dir],
-      (Tile::SplitV, Dir::L | Dir::R) => vec![Dir::D, Dir::U],
-      (Tile::SplitH, Dir::D | Dir::U) => vec![Dir::L, Dir::R],
-      (Tile::MirrorL, Dir::R) | (Tile::MirrorR, Dir::L) => vec![Dir::U],
-      (Tile::MirrorL, Dir::L) | (Tile::MirrorR, Dir::R) => vec![Dir::D],
-      (Tile::MirrorL, Dir::D) | (Tile::MirrorR, Dir::U) => vec![Dir::L],
-      (Tile::MirrorL, Dir::U) | (Tile::MirrorR, Dir::D) => vec![Dir::R],
+      (Tile::SplitV, Dir::S | Dir::N) | (Tile::SplitH, Dir::W | Dir::E) => vec![from_dir],
+      (Tile::SplitV, Dir::W | Dir::E) => vec![Dir::S, Dir::N],
+      (Tile::SplitH, Dir::S | Dir::N) => vec![Dir::W, Dir::E],
+      (Tile::MirrorL, Dir::E) | (Tile::MirrorR, Dir::W) => vec![Dir::N],
+      (Tile::MirrorL, Dir::W) | (Tile::MirrorR, Dir::E) => vec![Dir::S],
+      (Tile::MirrorL, Dir::S) | (Tile::MirrorR, Dir::N) => vec![Dir::W],
+      (Tile::MirrorL, Dir::N) | (Tile::MirrorR, Dir::S) => vec![Dir::E],
+      _ => vec![],
     }
   }
 }
 
 impl Solve {
-  fn energize(&self, init: ((usize, usize), Dir)) -> Vec<Vec<TileState>> {
-    let mut board = self.board.clone();
+  fn energize(&self, init: ((usize, usize), Dir)) -> Grid<TileState> {
+    let mut grid = self.grid.clone();
 
     let mut seen = HashSet::new();
     let mut edges = vec![init];
@@ -103,39 +102,36 @@ impl Solve {
       }
       seen.insert(edge.clone());
 
-      let t = match board[edge.0 .1][edge.0 .0].clone() {
-        TileState::Energized(t) => t,
-        TileState::Dormant(t) => t,
+      let t = match grid.at(edge.0 .0, edge.0 .1) {
+        Some(TileState::Energized(t)) => t.clone(),
+        Some(TileState::Dormant(t)) => t.clone(),
+        None => continue,
       };
-      board[edge.0 .1][edge.0 .0] = TileState::Energized(t.clone());
+      grid.put(edge.0 .0, edge.0 .1, TileState::Energized(t.clone()));
       t.refract(edge.1)
         .iter()
-        .filter_map(|d| d.next(edge.0, self.x_max, self.y_max))
+        .filter_map(|d| grid.step(edge.0 .0, edge.0 .1, 1, *d).map(|loc| (loc, *d)))
         .for_each(|edge| {
           edges.push(edge.clone());
         });
     }
-
-    board
+    grid
   }
 
   fn boarder(&self) -> Vec<((usize, usize), Dir)> {
-    let mut v = Vec::new();
-    for x in 0..self.x_max {
-      v.push(((x, 0), Dir::D));
-      v.push(((x, self.y_max - 1), Dir::U));
-    }
-    for y in 0..self.y_max {
-      v.push(((0, y), Dir::R));
-      v.push(((self.x_max - 1, y), Dir::L));
-    }
-    v
+    self
+      .grid
+      .left_side()
+      .map(|loc| (loc, Dir::E))
+      .chain(self.grid.right_side().map(|loc| (loc, Dir::W)))
+      .chain(self.grid.bottom_side().map(|loc| (loc, Dir::N)))
+      .chain(self.grid.top_side().map(|loc| (loc, Dir::S)))
+      .collect()
   }
 }
 
-fn count_energized(b: &Vec<Vec<TileState>>) -> usize {
+fn count_energized(b: &Grid<TileState>) -> usize {
   b.iter()
-    .flat_map(|v| v)
     .filter(|t| match t {
       TileState::Energized(_) => true,
       _ => false,
@@ -145,7 +141,7 @@ fn count_energized(b: &Vec<Vec<TileState>>) -> usize {
 
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(count_energized(&self.energize(((0, 0), Dir::R)))))
+    Ok(Box::new(count_energized(&self.energize(((0, 0), Dir::E)))))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
