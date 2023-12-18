@@ -132,7 +132,7 @@ impl Solve {
 
 fn count_energized(b: &Grid<TileState>) -> usize {
   b.iter()
-    .filter(|t| match t {
+    .filter(|(_, _, t)| match t {
       TileState::Energized(_) => true,
       _ => false,
     })

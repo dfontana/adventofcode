@@ -1,10 +1,10 @@
 use itertools::Itertools;
-use rust_util::Day;
+use rust_util::{grid::Grid, Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub struct Solve {
-  grid: Grid,
+  grid: Grid<Tile>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -14,10 +14,18 @@ enum Tile {
   Square,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct Grid {
-  board: Vec<Vec<Tile>>,
-  y_max: usize,
+impl Display for Tile {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Tile::Round => 'O',
+        Tile::Blank => '.',
+        Tile::Square => '#',
+      }
+    )
+  }
 }
 
 impl TryFrom<String> for Solve {
@@ -38,15 +46,12 @@ impl TryFrom<String> for Solve {
       })
       .collect_vec();
     Ok(Solve {
-      grid: Grid {
-        y_max: board.len(),
-        board,
-      },
+      grid: Grid::new(board),
     })
   }
 }
 
-fn find_cycle(g: &mut Grid, max: isize) -> (isize, isize, HashMap<Grid, isize>) {
+fn find_cycle(g: &mut Grid<Tile>, max: isize) -> (isize, isize, HashMap<Grid<Tile>, isize>) {
   let mut seen = HashMap::new();
   seen.insert(g.clone(), 0);
   let mut i = 1;
@@ -60,76 +65,53 @@ fn find_cycle(g: &mut Grid, max: isize) -> (isize, isize, HashMap<Grid, isize>) 
   }
 }
 
-fn total_load(board: &Vec<Vec<Tile>>, y_max: usize) -> usize {
-  board
+fn total_load(grid: &Grid<Tile>) -> usize {
+  grid
     .iter()
-    .enumerate()
-    .flat_map(|(y, v)| {
-      v.iter().filter_map(move |t| match t {
-        Tile::Round => Some(y),
-        _ => None,
-      })
+    .filter_map(|(y, _, t)| match t {
+      Tile::Round => Some(y),
+      _ => None,
     })
-    .map(|y| y_max - y)
+    .map(|y| grid.height() - y)
     .reduce(|acc, y| acc + y)
     .unwrap()
 }
 
-impl Grid {
-  fn rot90(&mut self) -> &mut Self {
-    self.board = (0..self.board[0].len())
-      .map(|i| {
-        self
-          .board
-          .iter()
-          .map(|inner| inner[i].clone())
-          .rev()
-          .collect::<Vec<_>>()
-      })
-      .collect();
-    self
-  }
-}
-
-fn cycle_one(g: &mut Grid) {
-  g.rot90();
-  g.rot90();
-  g.rot90();
+fn cycle_one(g: &mut Grid<Tile>) {
+  g.rot90().rot90().rot90();
   shift(g);
   shift(g.rot90());
   shift(g.rot90());
   shift(g.rot90());
-  g.rot90();
-  g.rot90();
+  g.rot90().rot90();
 }
 
-fn shift(g: &mut Grid) {
-  for row in g.board.iter_mut() {
+fn shift(g: &mut Grid<Tile>) {
+  for (y, _) in g.left_side() {
     let mut left_most = 0;
-    for x in 0..row.len() {
-      match row[x] {
-        Tile::Round => {
-          row[x] = Tile::Blank;
-          row[left_most] = Tile::Round;
+    for (_, x) in g.top_side() {
+      match g.at(y, x) {
+        Some(Tile::Round) => {
+          g.put(y, x, Tile::Blank);
+          g.put(y, left_most, Tile::Round);
           left_most += 1;
         }
-        Tile::Square => {
+        Some(Tile::Square) => {
           left_most = x + 1;
         }
-        Tile::Blank => {}
+        _ => {}
       }
     }
   }
 }
+
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
     let mut g = self.grid.clone();
-    g.rot90();
-    g.rot90();
-    g.rot90();
+    g.rot90().rot90().rot90();
     shift(&mut g);
     g.rot90();
-    Ok(Box::new(total_load(&g.board, g.y_max)))
+    Ok(Box::new(total_load(&g)))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
@@ -137,6 +119,6 @@ impl Day for Solve {
     let (start, period, grids) = find_cycle(&mut self.grid.clone(), max);
     let inverted: HashMap<_, _> = grids.iter().map(|(k, v)| (v, k)).collect();
     let end = inverted.get(&(start + (max - start) % period)).unwrap();
-    Ok(Box::new(total_load(&end.board, end.y_max)))
+    Ok(Box::new(total_load(&end)))
   }
 }

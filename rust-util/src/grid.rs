@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Grid<T> {
   board: Vec<Vec<T>>,
   x_max: usize,
@@ -39,6 +39,22 @@ impl<T: Display> Grid<T> {
   }
 }
 
+impl<T: Clone> Grid<T> {
+  pub fn rot90(&mut self) -> &mut Self {
+    self.board = (0..self.board[0].len())
+      .map(|i| {
+        self
+          .board
+          .iter()
+          .map(|inner| inner[i].clone())
+          .rev()
+          .collect::<Vec<_>>()
+      })
+      .collect();
+    self
+  }
+}
+
 impl<T> Grid<T> {
   pub fn new(board: Vec<Vec<T>>) -> Self {
     Grid {
@@ -46,6 +62,10 @@ impl<T> Grid<T> {
       y_max: board.len(),
       board,
     }
+  }
+
+  pub fn height(&self) -> usize {
+    self.y_max
   }
 
   pub fn bottom_right(&self) -> (usize, usize) {
@@ -130,18 +150,20 @@ pub struct GridIter<'a, T> {
   loc: (usize, usize),
 }
 impl<'a, T> Iterator for GridIter<'a, T> {
-  type Item = &'a T;
+  type Item = (usize, usize, &'a T);
 
   fn next(&mut self) -> Option<Self::Item> {
     match self.grid.at(self.loc.0, self.loc.1) {
       Some(t) => {
+        let ret = Some((self.loc.0, self.loc.1, t));
         self.loc = (self.loc.0, self.loc.1 + 1);
-        Some(t)
+        return ret;
       }
       None => match self.grid.at(self.loc.0 + 1, 0) {
         Some(t) => {
+          let ret = Some((self.loc.0 + 1, 0, t));
           self.loc = (self.loc.0 + 1, 1);
-          Some(t)
+          return ret;
         }
         None => None,
       },
