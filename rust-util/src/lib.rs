@@ -1,3 +1,6 @@
+pub mod grid;
+pub mod search;
+
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -19,7 +22,7 @@ impl Display for AocDay {
 
 pub trait Day: TryFrom<String, Error = Box<dyn std::error::Error>> {
   fn new(d: AocDay) -> Result<Self, Box<dyn Error>> {
-      Self::try_from(read_input(d)?)
+    Self::try_from(read_input(d)?)
   }
 
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>>;
@@ -28,11 +31,11 @@ pub trait Day: TryFrom<String, Error = Box<dyn std::error::Error>> {
   fn run(&self) -> Result<String, Box<dyn Error>> {
     let mut ans = match self.p1() {
       Ok(v) => format!("Part 1: {}", v),
-      Err(e) => format!("Part 1: {:?}", e)
+      Err(e) => format!("Part 1: {:?}", e),
     };
     ans = match self.p2() {
       Ok(v) => format!("{}\nPart 2: {}", ans, v),
-      Err(e) => format!("{}\nPart 2: {:?}", ans, e)
+      Err(e) => format!("{}\nPart 2: {:?}", ans, e),
     };
     Ok(ans)
   }
