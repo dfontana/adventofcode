@@ -1,8 +1,5 @@
 use itertools::Itertools;
-use rust_util::{
-  grid::{Dir, Grid},
-  Day,
-};
+use rust_util::{grid::Dir, Day};
 use std::{error::Error, fmt::Display};
 
 pub struct Solve {

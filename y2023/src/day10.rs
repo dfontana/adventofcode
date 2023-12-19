@@ -5,7 +5,6 @@ use std::{collections::HashMap, error::Error, fmt::Display};
 #[derive(Debug)]
 pub struct Solve {
   start_loc: (usize, usize),
-  nodes: HashMap<(usize, usize), Pipe>,
   graph: HashMap<(usize, usize), Adj>,
 }
 
@@ -149,11 +148,7 @@ impl TryFrom<String> for Solve {
       }
     }
 
-    Ok(Solve {
-      start_loc,
-      nodes,
-      graph,
-    })
+    Ok(Solve { start_loc, graph })
   }
 }
 
@@ -186,6 +181,50 @@ impl Solve {
 
     step
   }
+  fn shoelace(&self) -> usize {
+    let mut p_loc_a = self.start_loc;
+    let mut perm = 0;
+    let mut area = 0;
+
+    let (mut loc_a, _) = self
+      .graph
+      .get(&self.start_loc)
+      .map(|adj| adj.get())
+      .unwrap();
+
+    let mut corners = vec![self.start_loc.clone()];
+    let mut p_same_x = p_loc_a.0 == loc_a.0;
+    let mut p_same_y = p_loc_a.1 == loc_a.1;
+    loop {
+      let n_loc_a = self
+        .graph
+        .get(&loc_a)
+        .map(|adj| adj.get_from(&p_loc_a))
+        .unwrap();
+      let same_x = n_loc_a.0 == loc_a.0;
+      let same_y = n_loc_a.1 == loc_a.1;
+
+      if p_same_x && !same_x || p_same_y && !same_y {
+        corners.push(loc_a.clone());
+      }
+
+      perm += 1;
+      p_loc_a = loc_a;
+      loc_a = n_loc_a;
+      p_same_x = same_x;
+      p_same_y = same_y;
+
+      if loc_a == self.start_loc {
+        break;
+      }
+    }
+    corners.push(self.start_loc.clone());
+    let (sx, sy) = self.start_loc;
+    for (loc_a, n_loc_a) in corners.iter().tuple_windows() {
+      area += (loc_a.0 - sx) * (n_loc_a.1 - sy) - (n_loc_a.0 - sx) * (loc_a.1 - sy);
+    }
+    area / 2 - (perm + 2 - 1) / 2 + 1
+  }
 }
 
 impl Day for Solve {
@@ -194,6 +233,6 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(self.shoelace()))
   }
 }
