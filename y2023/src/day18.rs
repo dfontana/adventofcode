@@ -51,27 +51,53 @@ impl TryFrom<String> for Solve {
   }
 }
 
+fn shoelace_picks(inst: Vec<(Dir, isize)>) -> isize {
+  let mut last = (0, 0);
+  let mut perm = 0;
+  let mut area = 0;
+  for (dir, amt) in inst.iter() {
+    let next = match dir {
+      Dir::N => (last.0 - amt, last.1),
+      Dir::E => (last.0, last.1 + amt),
+      Dir::S => (last.0 + amt, last.1),
+      Dir::W => (last.0, last.1 - amt),
+      _ => unreachable!(),
+    };
+    perm += amt;
+    area += last.1 * next.0 - next.1 * last.0;
+    last = next;
+  }
+  area / 2 + perm / 2 + 1
+}
+
 impl Day for Solve {
   fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    let mut last = (0, 0);
-    let mut perm = 0;
-    let mut area = 0;
-    for Inst { dir, amt, color: _ } in self.input.iter() {
-      let next = match dir {
-        Dir::N => (last.0 - amt, last.1),
-        Dir::E => (last.0, last.1 + amt),
-        Dir::S => (last.0 + amt, last.1),
-        Dir::W => (last.0, last.1 - amt),
-        _ => unreachable!(),
-      };
-      perm += amt;
-      area += last.1 * next.0 - next.1 * last.0;
-      last = next;
-    }
-    Ok(Box::new(area / 2 + perm / 2 + 1))
+    Ok(Box::new(shoelace_picks(
+      self
+        .input
+        .iter()
+        .map(|Inst { dir, amt, .. }| (dir.clone(), *amt))
+        .collect(),
+    )))
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    Ok(Box::new(shoelace_picks(
+      self
+        .input
+        .iter()
+        .map(|Inst { color, .. }| {
+          let amt = isize::from_str_radix(&color[..5], 16).unwrap();
+          let dir = match &color[5..] {
+            "0" => Dir::E,
+            "1" => Dir::S,
+            "2" => Dir::W,
+            "3" => Dir::N,
+            _ => unreachable!(),
+          };
+          (dir, amt)
+        })
+        .collect(),
+    )))
   }
 }
