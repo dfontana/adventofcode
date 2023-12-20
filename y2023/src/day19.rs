@@ -195,6 +195,91 @@ impl Day for Solve {
   }
 
   fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-    Ok(Box::new(1))
+    let mut finals = Vec::new();
+    let mut frontier = vec![("in".to_string(), Ranges::default())];
+    while let Some((ptr, ranges)) = frontier.pop() {
+      let rules = self.workflows.get(&ptr).unwrap();
+
+      let mut rng = ranges.clone();
+      rng.append_path(ptr.clone());
+      for rule in rules.0.iter() {
+        match rule {
+          Rule::Outcome(Outcome::Accepted) => finals.push(rng.clone()),
+          Rule::Outcome(Outcome::Pointer(nxt)) => frontier.push((nxt.clone(), rng.clone())),
+          Rule::Outcome(Outcome::Rejected) => { /* Trash it*/ }
+          Rule::Condition(field, cnd, bound, out) => {
+            let mut this_rng = rng.clone();
+            match cnd {
+              Condition::LT => {
+                this_rng.update_high(field, *bound - 1);
+                rng.update_low(field, *bound);
+              }
+              Condition::GT => {
+                this_rng.update_low(field, *bound + 1);
+                rng.update_high(field, *bound);
+              }
+            }
+            if *out == Outcome::Accepted {
+              finals.push(this_rng.clone());
+            } else if let Outcome::Pointer(ptr) = out {
+              frontier.push((ptr.to_string(), this_rng.clone()));
+            }
+          }
+        }
+      }
+    }
+    Ok(Box::new(finals.iter().map(|rg| rg.combos()).sum::<usize>()))
+  }
+}
+
+#[derive(Clone, Debug)]
+struct Ranges {
+  x: (usize, usize),
+  m: (usize, usize),
+  a: (usize, usize),
+  s: (usize, usize),
+  path: Vec<String>,
+}
+
+impl Default for Ranges {
+  fn default() -> Self {
+    Ranges {
+      x: (1, 4000),
+      m: (1, 4000),
+      a: (1, 4000),
+      s: (1, 4000),
+      path: vec![],
+    }
+  }
+}
+
+impl Ranges {
+  fn update_high(&mut self, field: &Field, bound: usize) {
+    match field {
+      Field::X => self.x.1 = self.x.1.min(bound),
+      Field::M => self.m.1 = self.m.1.min(bound),
+      Field::A => self.a.1 = self.a.1.min(bound),
+      Field::S => self.s.1 = self.s.1.min(bound),
+    };
+  }
+
+  fn update_low(&mut self, field: &Field, bound: usize) {
+    match field {
+      Field::X => self.x.0 = self.x.0.max(bound),
+      Field::M => self.m.0 = self.m.0.max(bound),
+      Field::A => self.a.0 = self.a.0.max(bound),
+      Field::S => self.s.0 = self.s.0.max(bound),
+    };
+  }
+
+  fn combos(&self) -> usize {
+    (self.x.1 - self.x.0 + 1)
+      * (self.m.1 - self.m.0 + 1)
+      * (self.a.1 - self.a.0 + 1)
+      * (self.s.1 - self.s.0 + 1)
+  }
+
+  fn append_path(&mut self, ptr: String) {
+    self.path.push(ptr);
   }
 }
