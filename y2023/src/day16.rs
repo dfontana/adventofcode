@@ -38,6 +38,7 @@ impl Display for Tile {
     )
   }
 }
+
 impl Display for TileState {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
@@ -47,29 +48,26 @@ impl Display for TileState {
   }
 }
 
+impl From<char> for TileState {
+  fn from(c: char) -> Self {
+    let t = match c {
+      '.' => Tile::Blank,
+      '-' => Tile::SplitH,
+      '|' => Tile::SplitV,
+      '\\' => Tile::MirrorR,
+      '/' => Tile::MirrorL,
+      _ => unreachable!(),
+    };
+    TileState::Dormant(t)
+  }
+}
+
 impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let board: Vec<Vec<_>> = value
-      .lines()
-      .map(|line| {
-        line
-          .chars()
-          .map(|c| match c {
-            '.' => Tile::Blank,
-            '-' => Tile::SplitH,
-            '|' => Tile::SplitV,
-            '\\' => Tile::MirrorR,
-            '/' => Tile::MirrorL,
-            _ => unreachable!(),
-          })
-          .map(|t| TileState::Dormant(t))
-          .collect()
-      })
-      .collect();
     Ok(Solve {
-      grid: Grid::new(board),
+      grid: Grid::new_from(value),
     })
   }
 }

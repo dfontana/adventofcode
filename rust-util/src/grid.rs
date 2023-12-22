@@ -55,8 +55,26 @@ impl<T: Clone> Grid<T> {
   }
 }
 
+impl<T: From<char>> Grid<T> {
+  pub fn new_from(inp: String) -> Self {
+    Grid::new_from_map(inp, |c| T::from(c))
+  }
+}
+
 impl<T> Grid<T> {
   pub fn new(board: Vec<Vec<T>>) -> Self {
+    Grid {
+      x_max: board[0].len(),
+      y_max: board.len(),
+      board,
+    }
+  }
+
+  pub fn new_from_map(inp: String, fr: impl Fn(char) -> T) -> Self {
+    let board: Vec<Vec<T>> = inp
+      .lines()
+      .map(|l| l.chars().map(|c| fr(c)).collect())
+      .collect();
     Grid {
       x_max: board[0].len(),
       y_max: board.len(),
