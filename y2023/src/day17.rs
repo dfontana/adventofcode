@@ -9,18 +9,8 @@ impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let board: Vec<Vec<usize>> = value
-      .lines()
-      .map(|l| {
-        l.chars()
-          .filter_map(|c| c.to_digit(10))
-          .map(|n| n as usize)
-          .collect()
-      })
-      .collect();
-
     Ok(Solve {
-      grid: Grid::new(board),
+      grid: Grid::new_from_map(value, |c| c.to_digit(10).unwrap() as usize),
     })
   }
 }

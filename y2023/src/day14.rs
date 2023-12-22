@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use rust_util::{grid::Grid, Day};
 use std::{collections::HashMap, error::Error, fmt::Display};
 
@@ -12,6 +11,17 @@ enum Tile {
   Round,
   Blank,
   Square,
+}
+
+impl From<char> for Tile {
+  fn from(c: char) -> Self {
+    match c {
+      'O' => Tile::Round,
+      '.' => Tile::Blank,
+      '#' => Tile::Square,
+      _ => unreachable!(),
+    }
+  }
 }
 
 impl Display for Tile {
@@ -32,21 +42,8 @@ impl TryFrom<String> for Solve {
   type Error = Box<dyn Error>;
 
   fn try_from(value: String) -> Result<Self, Self::Error> {
-    let board = value
-      .lines()
-      .map(|l| {
-        l.chars()
-          .map(|c| match c {
-            'O' => Tile::Round,
-            '.' => Tile::Blank,
-            '#' => Tile::Square,
-            _ => unreachable!(),
-          })
-          .collect_vec()
-      })
-      .collect_vec();
     Ok(Solve {
-      grid: Grid::new(board),
+      grid: Grid::new_from(value),
     })
   }
 }
