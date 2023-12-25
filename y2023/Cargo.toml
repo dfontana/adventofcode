@@ -9,6 +9,7 @@ edition = "2021"
 crossterm = "0.25.0"
 dotenv = "0.15.0"
 itertools = "0.10.1"
+rand = "0.8.5"
 regex = "1.5.4"
 rust-util = {path = "../rust-util"}
 rust-util-macro = {path = "../rust-util-macro"}
