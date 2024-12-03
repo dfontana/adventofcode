@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use rust_util::Day;
 use std::{error::Error, fmt::Display, ops::Sub};
-use tracing_subscriber::Layer;
 
 pub struct Solve {
     left: Vec<i64>,
