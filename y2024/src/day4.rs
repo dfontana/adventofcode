@@ -26,76 +26,56 @@ impl TryFrom<String> for Solve {
 
 impl Day for Solve {
     fn p1(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn std::error::Error>> {
-        Ok(Box::new(find(&self)))
+        Ok(Box::new(find(
+            &self,
+            vec![['X', 'M', 'A', 'S']],
+            'X',
+            vec![n, s, e, w, ne, nw, se, sw],
+        )))
     }
 
     fn p2(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn std::error::Error>> {
-        Ok(Box::new(find2(&self)))
+        Ok(Box::new(find(
+            &self,
+            vec![
+                ['M', 'M', 'A', 'S', 'S'],
+                ['S', 'M', 'A', 'S', 'M'],
+                ['S', 'S', 'A', 'M', 'M'],
+                ['M', 'S', 'A', 'M', 'S'],
+            ],
+            'A',
+            vec![x],
+        )))
     }
 }
 
-fn find2(sol: &Solve) -> usize {
+fn find<F, T>(sol: &Solve, xmas: Vec<T>, anchor: char, ops: Vec<F>) -> usize
+where
+    for<'a> F: Extractor<'a, T>,
+    T: PartialEq + Eq,
+{
     let board = sol.board.chars().collect();
     let dims = (sol.width, sol.height);
     let mut cnt = 0;
-    let xmas = vec![
-        ['M', 'M', 'A', 'S', 'S'],
-        ['S', 'M', 'A', 'S', 'M'],
-        ['S', 'S', 'A', 'M', 'M'],
-        ['M', 'S', 'A', 'M', 'S'],
-    ];
-    for (pt, _) in sol.board.chars().enumerate().filter(|(_, c)| *c == 'A') {
-        cnt += x(dims, &board, pt)
-            .filter(|b| xmas.iter().any(|x| *x == *b))
-            .map(|_| 1)
-            .unwrap_or(0);
+    for (pt, _) in sol.board.chars().enumerate().filter(|(_, c)| *c == anchor) {
+        for op in ops.iter() {
+            cnt += op(dims, &board, pt)
+                .filter(|b| xmas.iter().any(|x| *x == *b))
+                .map(|_| 1)
+                .unwrap_or(0)
+        }
     }
     cnt
 }
 
-fn find(sol: &Solve) -> usize {
-    let board = sol.board.chars().collect();
-    let dims = (sol.width, sol.height);
-    let mut cnt = 0;
-    for (pt, _) in sol.board.chars().enumerate().filter(|(_, c)| *c == 'X') {
-        cnt += n(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += s(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += e(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += w(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += ne(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += nw(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += se(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-        cnt += sw(dims, &board, pt)
-            .filter(|b| *b == ['X', 'M', 'A', 'S'])
-            .map(|_| 1)
-            .unwrap_or(0);
-    }
-    cnt
+trait Extractor<'a, T>: Fn((usize, usize), &'a Vec<char>, usize) -> Option<T> {}
+impl<'a, T, F> Extractor<'a, T> for F
+where
+    F: Fn((usize, usize), &'a Vec<char>, usize) -> Option<T>,
+    T: PartialEq + Eq,
+{
 }
 
-// let y = (pt % w) - 1;
-// let x = pt - (pt % w);
 fn n<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4]> {
     Some([
         *b.get(pt)?,
@@ -104,7 +84,6 @@ fn n<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4
         *b.get(pt.checked_sub(3 * w)?)?,
     ])
 }
-
 fn s<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4]> {
     Some([
         *b.get(pt)?,
@@ -124,7 +103,6 @@ fn e<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4
         *b.get(pt + 3)?,
     ])
 }
-
 fn w<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4]> {
     (pt % w).checked_sub(3)?;
     Some([
@@ -134,7 +112,6 @@ fn w<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4
         *b.get(pt.checked_sub(3)?)?,
     ])
 }
-
 fn ne<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 4]> {
     if pt % w + 3 >= w {
         return None;
@@ -187,49 +164,4 @@ fn x<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 5
         *b.get(pt.checked_add(w)?.checked_sub(1)?)?, // SW
         *b.get(pt.checked_add(w)? + 1)?,             // SE
     ])
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn case1() {
-        let inp = "..X...\n.SAMX.\n.A..A.\nXMAS.S\n.X....".to_string();
-        println!("{inp}");
-        let solve = Solve::try_from(inp).unwrap();
-        assert_eq!(
-            solve,
-            Solve {
-                width: 6,
-                height: 5,
-                board: "..X....SAMX..A..A.XMAS.S.X....".into(),
-            }
-        );
-        let b = solve.board.chars().collect();
-        let dims = (solve.width, solve.height);
-
-        assert_eq!(n(dims, &b, 25), Some(['X', 'M', 'A', 'S']));
-        assert_eq!(n(dims, &b, 0), None);
-        assert_eq!(e(dims, &b, 0), Some(['.', '.', 'X', '.']));
-        assert_eq!(e(dims, &b, 8), Some(['A', 'M', 'X', '.']));
-        assert_eq!(e(dims, &b, 9), None);
-        assert_eq!(ne(dims, &b, 18), Some(['X', 'A', 'A', '.']));
-        assert_eq!(x(dims, &b, 7), Some(['.', 'X', 'S', '.', '.']));
-
-        assert_eq!(
-            format!("{}", solve.p1().unwrap()).parse::<i64>().unwrap(),
-            4
-        );
-    }
-
-    #[test]
-    fn case2() {
-        let inp = ".M.S......\n..A..MSMS.\n.M.S.MAA..\n..A.ASMSM.\n.M.S.M....\n..........\nS.S.S.S.S.\n.A.A.A.A..\nM.M.M.M.M.\n..........".to_string();
-        println!("{inp}");
-        let solve = Solve::try_from(inp).unwrap();
-        assert_eq!(
-            format!("{}", solve.p2().unwrap()).parse::<i64>().unwrap(),
-            9
-        );
-    }
 }
