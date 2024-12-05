@@ -1,5 +1,7 @@
+use itertools::Itertools;
 use rust_util::Day;
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     error::Error,
 };
@@ -63,10 +65,39 @@ impl Day for Solve {
 
     fn p2(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn std::error::Error>> {
         // Now find all the invalid pages (dropping valid ones)
-        // Re-order them to be valid
-        // sum their middle pages
-        Ok(Box::new(1))
+        // Re-order them to be valid & sum their middle pages
+        Ok(Box::new(
+            self.prints
+                .iter()
+                .filter(|(_, p)| !print_is_valid(p, &self.rules))
+                .map(|(_, p)| make_print_valid(p, &self.rules))
+                .map(|mi| mi[mi.len() / 2])
+                .sum::<u32>(),
+        ))
     }
+}
+
+fn make_print_valid(
+    p: &HashMap<u32, HashSet<u32>>,
+    rules: &HashMap<u32, HashSet<u32>>,
+) -> Vec<u32> {
+    // All you need are the pages and the rules for this exercise. You could probably
+    // benefit from some tree implementation and traversal to do this or... sorting
+    p.keys()
+        .sorted_by(|a, b| {
+            if rules.get(a).filter(|v| v.contains(b)).is_some() {
+                // A must come before B as per rules.
+                return Ordering::Less;
+            } else if rules.get(b).filter(|v| v.contains(a)).is_some() {
+                // B before A ^^^
+                return Ordering::Greater;
+            } else {
+                // Doesn't matter.
+                return Ordering::Equal;
+            }
+        })
+        .cloned()
+        .collect()
 }
 
 fn print_is_valid(p: &HashMap<u32, HashSet<u32>>, rules: &HashMap<u32, HashSet<u32>>) -> bool {
