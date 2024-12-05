@@ -8,7 +8,7 @@ pub struct Solve {
     // Key must come before any values
     rules: HashMap<u32, HashSet<u32>>,
     // (middle item, PrintItem -> Items coming before it)
-    prints: Vec<(u32, HashMap<u32, HashSet<u32>>)>,
+    prints: Vec<(Vec<u32>, HashMap<u32, HashSet<u32>>)>,
 }
 
 impl TryFrom<String> for Solve {
@@ -35,7 +35,7 @@ impl TryFrom<String> for Solve {
         let prints = printstr
             .lines()
             .map(|l| l.split(',').filter_map(|i| i.parse::<u32>().ok()).collect())
-            .map(|items: Vec<u32>| (items[items.len() / 2], make_before_set(items)))
+            .map(|items: Vec<u32>| (items.clone(), make_before_set(items)))
             .collect();
         Ok(Solve { rules, prints })
     }
@@ -56,12 +56,15 @@ impl Day for Solve {
             self.prints
                 .iter()
                 .filter(|(_, p)| print_is_valid(p, &self.rules))
-                .map(|(mi, _)| mi)
+                .map(|(mi, _)| mi[mi.len() / 2])
                 .sum::<u32>(),
         ))
     }
 
     fn p2(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn std::error::Error>> {
+        // Now find all the invalid pages (dropping valid ones)
+        // Re-order them to be valid
+        // sum their middle pages
         Ok(Box::new(1))
     }
 }
