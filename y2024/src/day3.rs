@@ -14,19 +14,38 @@ impl TryFrom<String> for Solve {
     }
 }
 
+const OPS_P1: [&'static str; 1] = ["mul("];
+const OPS_P2: [&'static str; 3] = ["mul(", "don't(", "do("];
+
 impl Day for Solve {
     fn p1(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn Error>> {
         let input = self.input.as_bytes();
         Ok(Box::new(
-            try_through_eof(input)
+            try_through_eof(input, OPS_P1.to_vec())
                 .iter()
-                .map(|mul| mul.0 * mul.1)
+                .filter_map(|op| match op {
+                    Operation::Mul(a, b) => Some(a * b),
+                    _ => None,
+                })
                 .sum::<i64>(),
         ))
     }
 
     fn p2(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn Error>> {
-        Ok(Box::new(1))
+        let input = self.input.as_bytes();
+        let mut total = 0;
+        let mut ddo = true;
+        for op in try_through_eof(input, OPS_P2.to_vec()).iter() {
+            match op {
+                Operation::Mul(a, b) if ddo => {
+                    total += a * b;
+                }
+                Operation::Do => ddo = true,
+                Operation::Dont => ddo = false,
+                _ => {}
+            }
+        }
+        Ok(Box::new(total))
     }
 }
 
@@ -95,31 +114,91 @@ fn parse_i64<'a>(bytes: &'a [u8]) -> Result<i64, PErr<'a>> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Mul(i64, i64);
+enum Operation {
+    Mul(i64, i64),
+    Do,
+    Dont,
+}
+#[derive(Debug, PartialEq, Eq)]
+enum OpType {
+    Mul,
+    Do,
+    Dont,
+}
+impl From<&str> for OpType {
+    fn from(value: &str) -> Self {
+        match value {
+            "mul(" => OpType::Mul,
+            "do(" => OpType::Do,
+            "don't(" => OpType::Dont,
+            _ => unreachable!(),
+        }
+    }
+}
 
-fn try_parse_mul<'a>(bytes: &'a [u8]) -> Result<(&'a [u8], Mul), PErr<'a>> {
-    let rem = drop_through(bytes, "mul(")?;
-    let (mnum, rem) = take_until_nan(rem, ',')?;
+// Returns everything after the parsed op or (if an error), where it stopped
+fn try_parse_mul<'a>(bytes: &'a [u8]) -> Result<(&'a [u8], Operation), PErr<'a>> {
+    let (mnum, rem) = take_until_nan(bytes, ',')?;
     let left = parse_i64(mnum).map_err(|_| PErr::NotFound(rem))?;
     let (mnum, rem) = take_until_nan(rem, ')')?;
     let right = parse_i64(mnum).map_err(|_| PErr::NotFound(rem))?;
-    Ok((rem, Mul(left, right)))
+    Ok((rem, Operation::Mul(left, right)))
 }
 
-fn try_through_eof<'a>(bytes: &[u8]) -> Vec<Mul> {
+fn match_next_into<'a>(
+    bytes: &'a [u8],
+    c: char,
+    op: Operation,
+) -> Result<(&'a [u8], Operation), PErr<'a>> {
+    bytes
+        .iter()
+        .next()
+        .filter(|b| **b == c as u8)
+        .map(|_| (&bytes[1..], op))
+        .ok_or(PErr::NotFound(bytes))
+}
+
+fn find_next_op<'a>(
+    bytes: &'a [u8],
+    ops: std::slice::Iter<'a, &str>,
+) -> Result<(&'a [u8], OpType), PErr<'a>> {
+    ops.map(|pfx| (drop_through(bytes, pfx), OpType::from(*pfx)))
+        .filter_map(|(mv, op)| match mv {
+            Ok(pn) => Some((pn, op)),
+            _ => None,
+        })
+        // Find earliest prefix which means most remainder
+        .max_by_key(|(pn, _)| pn.len())
+        .ok_or(PErr::NoMoreOps)
+}
+
+fn try_through_eof<'a>(bytes: &[u8], ops: Vec<&'a str>) -> Vec<Operation> {
     let mut ptr = bytes;
     let mut ret = Vec::new();
     loop {
         if ptr.is_empty() {
             break;
         }
-        match try_parse_mul(ptr) {
+
+        let (op_end, op_type) = match find_next_op(ptr, ops.iter()) {
+            Ok(v) => v,
+            // No more ops means no more work to parse
+            _ => break,
+        };
+
+        let maybe_op = match op_type {
+            OpType::Mul => try_parse_mul(op_end),
+            OpType::Do => match_next_into(op_end, ')', Operation::Do),
+            OpType::Dont => match_next_into(op_end, ')', Operation::Dont),
+        };
+
+        match maybe_op {
             Ok((pn, v)) => {
                 ret.push(v);
                 ptr = pn;
             }
-            Err(PErr::NotFound(pn)) => {
-                ptr = pn;
+            Err(PErr::NotFound(i_op_end)) => {
+                ptr = i_op_end;
             }
             _ => {}
         }
@@ -131,27 +210,12 @@ fn try_through_eof<'a>(bytes: &[u8]) -> Vec<Mul> {
 enum PErr<'a> {
     NotFound(&'a [u8]),
     Noti64,
+    NoMoreOps,
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn case1() {
-        assert_eq!(
-            try_parse_mul("mul(123,4)".as_bytes()).unwrap().1,
-            Mul(123, 4)
-        );
-        assert_eq!(
-            try_parse_mul("mul(12,42)".as_bytes()).unwrap().1,
-            Mul(12, 42)
-        );
-        assert_eq!(
-            try_parse_mul("mul(1,423)".as_bytes()).unwrap().1,
-            Mul(1, 423)
-        );
-    }
 
     #[test]
     fn case2() {
@@ -165,9 +229,17 @@ mod test {
     fn case3() {
         let ret = try_through_eof(
             "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))".as_bytes(),
+            OPS_P1.to_vec(),
         );
-        assert_eq!(ret, vec![Mul(2, 4), Mul(5, 5), Mul(11, 8), Mul(8, 5)]);
-        assert_eq!(ret.iter().map(|mul| mul.0 * mul.1).sum::<i64>(), 161);
+        assert_eq!(
+            ret,
+            vec![
+                Operation::Mul(2, 4),
+                Operation::Mul(5, 5),
+                Operation::Mul(11, 8),
+                Operation::Mul(8, 5)
+            ]
+        );
     }
 
     #[test]
@@ -184,6 +256,23 @@ mod test {
         assert_eq!(
             drop_through("mmul".as_bytes(), "mud"),
             Err(PErr::NotFound("".as_bytes()))
+        );
+    }
+
+    #[test]
+    fn case5() {
+        let ret = try_through_eof(
+            "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))".as_bytes(),
+            OPS_P1.to_vec(),
+        );
+        assert_eq!(
+            ret,
+            vec![
+                Operation::Mul(2, 4),
+                Operation::Mul(5, 5),
+                Operation::Mul(11, 8),
+                Operation::Mul(8, 5)
+            ]
         );
     }
 }
