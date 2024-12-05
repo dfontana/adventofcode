@@ -30,8 +30,27 @@ impl Day for Solve {
     }
 
     fn p2(&self) -> Result<Box<dyn std::fmt::Display>, Box<dyn std::error::Error>> {
-        Ok(Box::new(1))
+        Ok(Box::new(find2(&self)))
     }
+}
+
+fn find2(sol: &Solve) -> usize {
+    let board = sol.board.chars().collect();
+    let dims = (sol.width, sol.height);
+    let mut cnt = 0;
+    let xmas = vec![
+        ['M', 'M', 'A', 'S', 'S'],
+        ['S', 'M', 'A', 'S', 'M'],
+        ['S', 'S', 'A', 'M', 'M'],
+        ['M', 'S', 'A', 'M', 'S'],
+    ];
+    for (pt, _) in sol.board.chars().enumerate().filter(|(_, c)| *c == 'A') {
+        cnt += x(dims, &board, pt)
+            .filter(|b| xmas.iter().any(|x| *x == *b))
+            .map(|_| 1)
+            .unwrap_or(0);
+    }
+    cnt
 }
 
 fn find(sol: &Solve) -> usize {
@@ -156,6 +175,19 @@ fn sw<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 
         *b.get(pt.checked_add(3 * w)?.checked_sub(3)?)?,
     ])
 }
+fn x<'a>((w, _): (usize, usize), b: &'a Vec<char>, pt: usize) -> Option<[char; 5]> {
+    (pt % w).checked_sub(1)?;
+    if pt % w + 1 >= w {
+        return None;
+    }
+    Some([
+        *b.get(pt.checked_sub(w)?.checked_sub(1)?)?, // NW
+        *b.get(pt.checked_sub(w)? + 1)?,             // NE
+        *b.get(pt)?,
+        *b.get(pt.checked_add(w)?.checked_sub(1)?)?, // SW
+        *b.get(pt.checked_add(w)? + 1)?,             // SE
+    ])
+}
 
 #[cfg(test)]
 mod test {
@@ -163,6 +195,7 @@ mod test {
     #[test]
     fn case1() {
         let inp = "..X...\n.SAMX.\n.A..A.\nXMAS.S\n.X....".to_string();
+        println!("{inp}");
         let solve = Solve::try_from(inp).unwrap();
         assert_eq!(
             solve,
@@ -181,10 +214,22 @@ mod test {
         assert_eq!(e(dims, &b, 8), Some(['A', 'M', 'X', '.']));
         assert_eq!(e(dims, &b, 9), None);
         assert_eq!(ne(dims, &b, 18), Some(['X', 'A', 'A', '.']));
+        assert_eq!(x(dims, &b, 7), Some(['.', 'X', 'S', '.', '.']));
 
         assert_eq!(
             format!("{}", solve.p1().unwrap()).parse::<i64>().unwrap(),
             4
+        );
+    }
+
+    #[test]
+    fn case2() {
+        let inp = ".M.S......\n..A..MSMS.\n.M.S.MAA..\n..A.ASMSM.\n.M.S.M....\n..........\nS.S.S.S.S.\n.A.A.A.A..\nM.M.M.M.M.\n..........".to_string();
+        println!("{inp}");
+        let solve = Solve::try_from(inp).unwrap();
+        assert_eq!(
+            format!("{}", solve.p2().unwrap()).parse::<i64>().unwrap(),
+            9
         );
     }
 }
