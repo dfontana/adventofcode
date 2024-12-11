@@ -1,8 +1,8 @@
 use rust_util::Day;
-use std::{collections::VecDeque, error::Error, fmt::Display};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 pub struct Solve {
-    stones: Vec<usize>,
+    stones: HashMap<usize, usize>,
 }
 impl TryFrom<String> for Solve {
     type Error = Box<dyn Error>;
@@ -12,25 +12,24 @@ impl TryFrom<String> for Solve {
             stones: value
                 .split_whitespace()
                 .filter_map(|v| v.parse::<usize>().ok())
-                .collect(),
+                .fold(HashMap::new(), |mut acc, v| {
+                    acc.entry(v).and_modify(|c| *c += 1).or_insert(1);
+                    acc
+                }),
         })
     }
 }
 impl Day for Solve {
-    // 229043
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(blink(self.stones.clone(), 25)))
+        Ok(Box::new(blink(&self.stones, 25)))
     }
 
-    // TBD
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        // let mul = 75;
-        let mul = 1;
-        Ok(Box::new(blink(self.stones.clone(), mul)))
+        Ok(Box::new(blink(&self.stones, 75)))
     }
 }
 
-// TODO: This is horrible for performance
+// Is there a better way?
 fn digits(s: usize) -> u32 {
     let mut v = 10;
     let mut n = 1;
@@ -50,32 +49,37 @@ fn split(s: usize, len: u32) -> (usize, usize) {
     (left, right)
 }
 
-fn blink(input: Vec<usize>, blinks: usize) -> usize {
-    // Obviously will blow up space. How can I compress this?
-    // - Is there a way to know the number of digits and only track the
-    //   number of stones with a number of digits?
-    let mut stones = VecDeque::from_iter(input);
+fn blink(input: &HashMap<usize, usize>, blinks: usize) -> usize {
+    let mut stones = input.clone();
     for _ in 0..blinks {
-        for _ in 0..stones.len() {
-            if let Some(s) = stones.pop_front() {
-                if s == 0 {
-                    stones.push_back(1);
-                    continue;
-                }
-
-                let num_digits = digits(s);
-                if num_digits % 2 == 0 {
-                    let (l, r) = split(s, num_digits);
-                    stones.push_back(r);
-                    stones.push_back(l);
-                    continue;
-                }
-
-                stones.push_back(s * 2024);
+        let keys = stones
+            .iter()
+            .map(|(k, v)| (*k, *v))
+            .collect::<Vec<(usize, usize)>>();
+        for (sp, cp) in keys {
+            let s = sp;
+            let count = cp;
+            stones.entry(s).and_modify(|c| *c -= count);
+            if s == 0 {
+                stones.entry(1).and_modify(|c| *c += count).or_insert(count);
+                continue;
             }
+
+            let num_digits = digits(s);
+            if num_digits % 2 == 0 {
+                let (l, r) = split(s, num_digits);
+                stones.entry(l).and_modify(|c| *c += count).or_insert(count);
+                stones.entry(r).and_modify(|c| *c += count).or_insert(count);
+                continue;
+            }
+
+            stones
+                .entry(s * 2024)
+                .and_modify(|c| *c += count)
+                .or_insert(count);
         }
     }
-    stones.len()
+    stones.values().sum()
 }
 
 #[cfg(test)]
