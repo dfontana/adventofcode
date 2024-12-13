@@ -1,21 +1,32 @@
-use rust_util::{grid::Grid, Day};
-use std::{error::Error, fmt::Display};
+use rust_util::Day;
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    error::Error,
+    fmt::Display,
+};
 
 pub struct Solve {
-    grid: Grid<char>,
+    layers: HashMap<char, SparseGrid>,
 }
 impl TryFrom<String> for Solve {
     type Error = Box<dyn Error>;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Ok(Solve {
-            grid: Grid::new_from(value),
+            layers: into_layers(value),
         })
     }
 }
 impl Day for Solve {
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(1))
+        Ok(Box::new(
+            self.layers
+                .values()
+                .flat_map(|l| find_beds_of_layer(l))
+                .map(|bed| area_and_perimeter_of_bed(&bed))
+                .map(|(a, p)| a * p)
+                .sum::<usize>(),
+        ))
     }
 
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
@@ -23,31 +34,77 @@ impl Day for Solve {
     }
 }
 
-// High level ideas:
-// 1. Build a map of each unique character seen to all the loc's where they are (this makes "layers")
-// 2. BFS each character ("layer") to find all neighbors:
-//    - Start the frontier with _all_ locs of that character present. Each entry should be a vec to track the "paths"
-//    - Track a seen list, as you pop items off if they are in the seen then another item already has it as a neighor. Drop it.
-//    - Expand to any neighbor locs that exist & continue...
-//    - (How can you tell all possible neighbors have been seen vs a dead end?)
-// ...
-// BFS might not be the right algo. You want something like it though. Keep thinking.
+type Loc = (usize, usize);
+type SparseGrid = HashSet<Loc>;
+type Bed = HashSet<Loc>;
+fn into_layers(input: String) -> HashMap<char, SparseGrid> {
+    input
+        .lines()
+        .enumerate()
+        .flat_map(|(y, l)| l.chars().enumerate().map(move |(x, c)| ((y, x), c)))
+        .fold(HashMap::new(), |mut acc, (loc, c)| {
+            acc.entry(c)
+                .and_modify(|hs| {
+                    hs.insert(loc);
+                })
+                .or_insert_with(|| HashSet::from_iter(vec![loc]));
+            acc
+        })
+}
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn example() {
-        let input = "".to_string();
-        let solve = Solve::try_from(input).unwrap();
-        assert_eq!(
-            format!("{}", solve.p1().unwrap()).parse::<i64>().unwrap(),
-            1
-        );
-        assert_eq!(
-            format!("{}", solve.p2().unwrap()).parse::<i64>().unwrap(),
-            1
-        );
+fn find_beds_of_layer(grid: &SparseGrid) -> Vec<Bed> {
+    let mut beds: Vec<Bed> = Vec::new();
+    let mut global_seen: HashSet<Loc> = HashSet::new();
+    for loc in grid.iter() {
+        if global_seen.contains(loc) {
+            // It's in a bed already
+            continue;
+        }
+        // Iterate repeatedly growing from point until no more growth; Bed is filled.
+        let mut bed: Bed = HashSet::new();
+        let mut frontier = VecDeque::from_iter(vec![*loc]);
+        while let Some((y, x)) = frontier.pop_front() {
+            if bed.contains(&(y, x)) {
+                continue;
+            }
+            bed.insert((y, x));
+            if grid.contains(&(y - 1, x)) {
+                frontier.push_back((y - 1, x));
+            }
+            if grid.contains(&(y + 1, x)) {
+                frontier.push_back((y + 1, x));
+            }
+            if grid.contains(&(y, x - 1)) {
+                frontier.push_back((y, x - 1));
+            }
+            if grid.contains(&(y, x + 1)) {
+                frontier.push_back((y, x + 1));
+            }
+        }
+        global_seen.extend(bed.iter());
+        beds.push(bed);
     }
+    beds
+}
+
+fn area_and_perimeter_of_bed(bed: &Bed) -> (usize, usize) {
+    // Area is just the size of the bed
+    // Perimeter == (area*4) - (non-unique number of edges touching)
+    let area = bed.len();
+    let mut touching = 0;
+    for (y, x) in bed.iter() {
+        if bed.contains(&(y - 1, *x)) {
+            touching += 1;
+        }
+        if bed.contains(&(y + 1, *x)) {
+            touching += 1;
+        }
+        if bed.contains(&(*y, x - 1)) {
+            touching += 1;
+        }
+        if bed.contains(&(*y, x + 1)) {
+            touching += 1;
+        }
+    }
+    (area, area * 4 - touching)
 }
