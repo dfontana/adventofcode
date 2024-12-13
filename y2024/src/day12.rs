@@ -30,7 +30,14 @@ impl Day for Solve {
     }
 
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(1))
+        Ok(Box::new(
+            self.layers
+                .values()
+                .flat_map(|l| find_beds_of_layer(l))
+                .map(|bed| area_and_corners_of_bed(&bed))
+                .map(|(a, p)| a * p)
+                .sum::<usize>(),
+        ))
     }
 }
 
@@ -107,4 +114,32 @@ fn area_and_perimeter_of_bed(bed: &Bed) -> (usize, usize) {
         }
     }
     (area, area * 4 - touching)
+}
+
+// 423883 -> Low
+fn area_and_corners_of_bed(bed: &Bed) -> (usize, usize) {
+    let area = bed.len();
+    let corners = bed
+        .iter()
+        .filter(|(y, x)| {
+            // If 3 not 4 are touching, it's interior corner
+            // if 2 not 4 touching it's exterior corner
+            let mut touching = 0;
+            if bed.contains(&(y - 1, *x)) {
+                touching += 1;
+            }
+            if bed.contains(&(y + 1, *x)) {
+                touching += 1;
+            }
+            if bed.contains(&(*y, x - 1)) {
+                touching += 1;
+            }
+            if bed.contains(&(*y, x + 1)) {
+                touching += 1;
+            }
+            touching == 3 || touching == 2
+        })
+        .count()
+        / 2;
+    (area, corners)
 }
