@@ -92,14 +92,17 @@ impl Day for Solve {
             stdout: &mut stdout(),
             enabled: true,
         };
+        let sleep = 1; // Edit this to find value
+        let brkpt = 103 * 101;
         let mut cnt = 43;
         let step = 103;
         let mut bots = self.bots.iter().map(|b| b.sim(cnt, 101, 103)).collect();
-        loop {
-            printer.print(&bots, cnt);
+        while cnt < brkpt {
+            printer.print(&bots, cnt, sleep);
             bots = bots.iter().map(|b| b.sim(step, 101, 103)).collect();
             cnt += step;
         }
+        Ok(Box::new(1))
     }
 }
 
@@ -111,7 +114,7 @@ struct StdoutPrinter<'a> {
 }
 
 impl StdoutPrinter<'_> {
-    fn print(&mut self, bots: &Vec<Bot>, loopn: i64) {
+    fn print(&mut self, bots: &Vec<Bot>, loopn: i64, sleep: u64) {
         if !self.enabled {
             return;
         }
@@ -142,6 +145,6 @@ impl StdoutPrinter<'_> {
         }
         writeln!(self.stdout, "Loop Num: {}", loopn).unwrap();
 
-        std::thread::sleep(std::time::Duration::from_millis(1000));
+        std::thread::sleep(std::time::Duration::from_millis(sleep));
     }
 }
