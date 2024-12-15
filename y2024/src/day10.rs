@@ -56,7 +56,7 @@ fn unique_trails_from(
     while let Some(path) = frontier.pop_front() {
         let (y, x, h) = path.last().unwrap(); // Never empty
         for dir in [Dir::E, Dir::W, Dir::N, Dir::S] {
-            if let Some((loc, h1)) = map.at_step(*y, *x, 1, dir) {
+            if let Some((loc, h1)) = map.at_step(*y, *x, 1, &dir) {
                 if *h1 != h + 1 {
                     // not a valid step to take
                     continue;

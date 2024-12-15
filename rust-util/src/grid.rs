@@ -135,7 +135,7 @@ impl<T> Grid<T> {
     }
   }
 
-  pub fn step(&self, y: usize, x: usize, step: usize, dir: Dir) -> Option<(usize, usize)> {
+  pub fn step(&self, y: usize, x: usize, step: usize, dir: &Dir) -> Option<(usize, usize)> {
     match dir {
       Dir::W => x.checked_sub(step).map(|x| (y, x)),
       Dir::N => y.checked_sub(step).map(|y| (y, x)),
@@ -145,7 +145,13 @@ impl<T> Grid<T> {
     }
   }
 
-  pub fn at_step(&self, y: usize, x: usize, step: usize, dir: Dir) -> Option<((usize, usize), &T)> {
+  pub fn at_step(
+    &self,
+    y: usize,
+    x: usize,
+    step: usize,
+    dir: &Dir,
+  ) -> Option<((usize, usize), &T)> {
     self
       .step(y, x, step, dir)
       .and_then(|loc| self.at(loc.0, loc.1).map(|t| (loc, t)))

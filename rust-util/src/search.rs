@@ -28,7 +28,7 @@ pub fn dijkstra(grid: Grid<usize>, minstep: usize, maxstep: usize) -> usize {
 
       let mut next_cost = cost;
       for dist in 1..=maxstep {
-        let Some(((rr, cc), cost)) = grid.at_step(y, x, dist, dir.clone()) else {
+        let Some(((rr, cc), cost)) = grid.at_step(y, x, dist, &dir) else {
           continue;
         };
         next_cost += cost;
