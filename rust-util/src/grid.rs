@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Stdout, io::Write};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Grid<T> {
@@ -35,6 +35,14 @@ impl<T: Display> Grid<T> {
         print!("{}", self.board[y][x]);
       }
       println!();
+    }
+  }
+  pub fn write(&self, stdout: &mut Stdout) {
+    for y in 0..self.y_max {
+      for x in 0..self.x_max {
+        write!(stdout, "{}", self.board[y][x]).unwrap();
+      }
+      writeln!(stdout).unwrap();
     }
   }
 }

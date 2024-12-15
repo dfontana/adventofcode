@@ -30,7 +30,6 @@ impl TryFrom<String> for Solve {
     }
 }
 impl Day for Solve {
-    // 1294459
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
         let mut mgrid = Grid::new_from(self.maze.clone());
         let start = mgrid
@@ -47,8 +46,6 @@ impl Day for Solve {
         ))
     }
 
-    // TODO: Works but wrong answer, sample input doesn't end in the right state so something
-    //       isn't moving when it should or what-not. Needs debug
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
         let mut mgrid = Grid::new_from(
             self.maze
@@ -80,11 +77,9 @@ impl Day for Solve {
 
 fn apply<'a>(start: (usize, usize), grid: &'a mut Grid<char>, insts: &Vec<Dir>) -> &'a Grid<char> {
     let (mut fy, mut fx) = start;
-    grid.print();
     for dir in insts {
         let mvmt = prop_move(grid, dir, ((fy, fx), *grid.at(fy, fx).unwrap()));
         if let Some(moves) = mvmt {
-            // println!("Moving {fy},{fx} {dir:?} -> {moves:?}");
             let mut touched = HashSet::new();
             moves.iter().for_each(|(_, to, set_c)| {
                 touched.insert(to);
@@ -104,9 +99,7 @@ fn apply<'a>(start: (usize, usize), grid: &'a mut Grid<char>, insts: &Vec<Dir>) 
             fy = ny;
             fx = nx;
         }
-        // grid.print();
     }
-    grid.print();
     grid
 }
 
@@ -141,18 +134,19 @@ fn rec_move_ns(grid: &Grid<char>, dir: &Dir, (from, moving): (Loc, char)) -> Opt
             let rx = from.1.checked_add_signed(dx)?;
             let (tl, lc) = grid.at_step(from.0, from.1, 1, dir)?;
             let (tr, rc) = grid.at_step(from.0, rx, 1, dir)?;
-            if *lc == '.' && *rc == '.' {
-                return Some(vec![(from, tl, moving), ((from.0, rx), tr, opp)]);
-            }
             if *lc == '#' || *rc == '#' {
                 return None;
             }
-            let mut left_moves = rec_move_ns(grid, dir, (tl, *lc))?;
-            let right_moves = rec_move_ns(grid, dir, (tr, *rc))?;
-            left_moves.push((from, tl, moving));
-            left_moves.push(((from.0, rx), tr, opp));
-            left_moves.extend(right_moves);
-            Some(left_moves)
+            let mut moves = Vec::new();
+            if *lc != '.' {
+                moves.extend(rec_move_ns(grid, dir, (tl, *lc))?);
+            }
+            moves.push((from, tl, moving));
+            moves.push(((from.0, rx), tr, opp));
+            if *rc != '.' {
+                moves.extend(rec_move_ns(grid, dir, (tr, *rc))?);
+            }
+            Some(moves)
         }
         'O' | '@' => {
             let (to_loc, to_c) = grid.at_step(from.0, from.1, 1, dir)?;
@@ -166,6 +160,7 @@ fn rec_move_ns(grid: &Grid<char>, dir: &Dir, (from, moving): (Loc, char)) -> Opt
             moves.push((from, to_loc, moving));
             Some(moves)
         }
-        _ => None,
+        '#' => None,
+        _ => unreachable!("Moving something I shouldn't! {moving}"),
     }
 }
