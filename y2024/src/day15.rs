@@ -47,6 +47,8 @@ impl Day for Solve {
         ))
     }
 
+    // TODO: Works but wrong answer, sample input doesn't end in the right state so something
+    //       isn't moving when it should or what-not. Needs debug
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
         let mut mgrid = Grid::new_from(
             self.maze
