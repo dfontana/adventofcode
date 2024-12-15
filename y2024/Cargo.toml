@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+crossterm = "0.25.0"
 dotenv = "0.15.0"
 itertools = "0.13.0"
 rust-util = {path = "../rust-util"}
