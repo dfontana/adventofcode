@@ -25,51 +25,70 @@ impl TryFrom<String> for Solve {
 
 impl Day for Solve {
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        let (gx, gy) = (70, 70);
-        let (mx, my) = (gx + 1, gy + 1);
-        let falling = 1024;
-        let walls = self
-            .bytes
-            .iter()
-            .take(falling)
-            .fold(HashMap::new(), |mut acc, (y, x)| {
-                acc.entry(y)
-                    .and_modify(|v: &mut HashSet<usize>| {
-                        v.insert(*x);
-                    })
-                    .or_insert_with(|| HashSet::from_iter(vec![*x]));
-                acc
-            });
+        let walls = mk_walls(&self.bytes, 1024);
+        Ok(Box::new(find_path(&walls).unwrap()))
+    }
 
-        let mut frontier = VecDeque::from_iter(vec![(0, 0, 0)]);
-        let mut seen: HashSet<Loc> = HashSet::from_iter(vec![(0, 0)]);
-        while let Some((y, x, steps)) = frontier.pop_front() {
-            if y == gy && x == gx {
-                return Ok(Box::new(steps));
-            }
-            for dir in [Dir::N, Dir::S, Dir::W, Dir::E] {
-                if let Some((ny, nx)) = step(y, x, 1, &my, &mx, &dir) {
-                    if seen.contains(&(ny, nx)) {
-                        continue;
-                    }
-                    if walls.get(&ny).filter(|v| v.contains(&nx)).is_some() {
-                        // Can't walk here
-                        continue;
-                    }
-                    seen.insert((ny, nx));
-                    frontier.push_back((ny, nx, steps + 1));
-                }
+    fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+        let falling = 1024;
+        let mut walls = mk_walls(&self.bytes, falling);
+        for (y, x) in &self.bytes[falling..] {
+            walls
+                .entry(y)
+                .and_modify(|v: &mut HashSet<usize>| {
+                    v.insert(*x);
+                })
+                .or_insert_with(|| HashSet::from_iter(vec![*x]));
+            if find_path(&walls) == None {
+                return Ok(Box::new(format!("{x},{y}")));
             }
         }
         Ok(Box::new(0))
     }
-
-    fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(1))
-    }
 }
 
-pub fn step(
+fn mk_walls(bytes: &Vec<Loc>, len: usize) -> HashMap<&usize, HashSet<usize>> {
+    bytes
+        .iter()
+        .take(len)
+        .fold(HashMap::new(), |mut acc, (y, x)| {
+            acc.entry(y)
+                .and_modify(|v: &mut HashSet<usize>| {
+                    v.insert(*x);
+                })
+                .or_insert_with(|| HashSet::from_iter(vec![*x]));
+            acc
+        })
+}
+
+fn find_path(walls: &HashMap<&usize, HashSet<usize>>) -> Option<usize> {
+    let (gx, gy) = (70, 70);
+    let (mx, my) = (gx + 1, gy + 1);
+
+    let mut frontier = VecDeque::from_iter(vec![(0, 0, 0)]);
+    let mut seen: HashSet<Loc> = HashSet::from_iter(vec![(0, 0)]);
+    while let Some((y, x, steps)) = frontier.pop_front() {
+        if y == gy && x == gx {
+            return Some(steps);
+        }
+        for dir in [Dir::N, Dir::S, Dir::W, Dir::E] {
+            if let Some((ny, nx)) = step(y, x, 1, &my, &mx, &dir) {
+                if seen.contains(&(ny, nx)) {
+                    continue;
+                }
+                if walls.get(&ny).filter(|v| v.contains(&nx)).is_some() {
+                    // Can't walk here
+                    continue;
+                }
+                seen.insert((ny, nx));
+                frontier.push_back((ny, nx, steps + 1));
+            }
+        }
+    }
+    None
+}
+
+fn step(
     y: usize,
     x: usize,
     step: usize,
@@ -82,6 +101,6 @@ pub fn step(
         Dir::N => y.checked_sub(step).map(|y| (y, x)),
         Dir::E => Some(x + step).filter(|x| *x < *mx).map(|x| (y, x)),
         Dir::S => Some(y + step).filter(|y| *y < *my).map(|y| (y, x)),
-        Dir::Idle => Some((y, x)),
+        _ => unreachable!(),
     }
 }
