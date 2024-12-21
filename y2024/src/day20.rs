@@ -4,7 +4,7 @@ use rust_util::{
     Day,
 };
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, VecDeque},
     error::Error,
     fmt::{self, Display},
 };
@@ -60,10 +60,8 @@ impl TryFrom<String> for Solve {
 
 impl Day for Solve {
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(find_shortcuts(&get_dists(
-            &self.grid,
-            &self.start,
-        ))))
+        let ans = find_shortcuts(&get_dists(&self.grid, &self.start));
+        Ok(Box::new(format!("P1: {}, P2: {}", ans.0, ans.1)))
     }
 
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
@@ -71,80 +69,19 @@ impl Day for Solve {
     }
 }
 
-fn find_path(grid: &Grid<Tile>, start: &Loc) -> usize {
-    let mut frontier = VecDeque::from_iter(vec![(0, *start)]);
-    let mut seen = HashSet::new();
-    while let Some((cost_to_here, (y, x))) = frontier.pop_front() {
-        if grid.at(y, x).filter(|t| **t == Tile::End).is_some() {
-            println!("target: {cost_to_here}");
-            return cost_to_here;
-        }
-        for dir in [Dir::N, Dir::S, Dir::E, Dir::W] {
-            if let Some(((ny, nx), nt)) = grid.at_step(y, x, 1, &dir) {
-                if *nt == Tile::Wall {
-                    continue;
-                }
-                if seen.contains(&(ny, nx)) {
-                    continue;
-                }
-                seen.insert((ny, nx));
-                frontier.push_back((cost_to_here + 1, (ny, nx)));
-            }
-        }
-    }
-    unreachable!("Solution was guaranteed to exist")
-}
-
-fn find_cheaper_than(grid: &Grid<Tile>, start: &Loc, max_cost_allowed: usize) -> Vec<usize> {
-    let path: HashSet<Loc> = HashSet::from_iter(vec![*start]);
-    let mut frontier = VecDeque::from_iter(vec![(0, false, *start, path)]);
-    let mut solution_costs = Vec::new();
-    while let Some((cost_to_here, has_cheated, (y, x), in_path)) = frontier.pop_front() {
-        if cost_to_here > max_cost_allowed {
-            continue;
-        }
-        if grid.at(y, x).filter(|t| **t == Tile::End).is_some() {
-            solution_costs.push(cost_to_here);
-            continue;
-        }
-
-        for dir in [Dir::N, Dir::S, Dir::E, Dir::W] {
-            if let Some(((ny, nx), nt)) = grid.at_step(y, x, 1, &dir) {
-                if *nt == Tile::Wall && has_cheated {
-                    continue;
-                }
-                if in_path.contains(&(ny, nx)) {
-                    continue;
-                }
-                let mut new_path = in_path.clone();
-                new_path.insert((ny, nx));
-                frontier.push_front((
-                    cost_to_here + 1,
-                    has_cheated || *nt == Tile::Wall,
-                    (ny, nx),
-                    new_path,
-                ));
-            }
-        }
-    }
-    solution_costs
-}
-
-// 8944 is too high
 fn get_dists(grid: &Grid<Tile>, start: &Loc) -> HashMap<Loc, usize> {
     let mut dists = HashMap::new();
+    dists.insert(*start, 0);
     let mut frontier = VecDeque::from_iter(vec![(0, *start)]);
-    let mut seen = HashSet::new();
     while let Some((cost_to_here, (y, x))) = frontier.pop_front() {
         for dir in [Dir::N, Dir::S, Dir::E, Dir::W] {
             if let Some(((ny, nx), t)) = grid.at_step(y, x, 1, &dir) {
                 if *t == Tile::Wall {
                     continue;
                 }
-                if seen.contains(&(ny, nx)) {
+                if dists.contains_key(&(ny, nx)) {
                     continue;
                 }
-                seen.insert((ny, nx));
                 dists.insert((ny, nx), cost_to_here + 1);
                 frontier.push_back((cost_to_here + 1, (ny, nx)));
             }
@@ -153,13 +90,22 @@ fn get_dists(grid: &Grid<Tile>, start: &Loc) -> HashMap<Loc, usize> {
     dists
 }
 
-fn find_shortcuts(dists: &HashMap<Loc, usize>) -> usize {
-    let mut shortcuts = 0;
-    for (((y1, x1), c1), ((y2, x2), c2)) in dists.iter().tuple_combinations() {
+fn find_shortcuts(dists: &HashMap<Loc, usize>) -> (usize, usize) {
+    let mut short_2s = 0;
+    let mut short_20s = 0;
+    for (((y1, x1), c1), ((y2, x2), c2)) in dists
+        .iter()
+        .sorted_by(|a, b| Ord::cmp(&a.1, &b.1))
+        .tuple_combinations()
+    {
         let dist = (*x1 as isize - *x2 as isize).abs() + (*y1 as isize - *y2 as isize).abs();
-        if dist == 2 && c2 - c1 - dist as usize >= 100 {
-            shortcuts += 1;
+        let cost = *c2 as isize - *c1 as isize - dist;
+        if dist == 2 && cost >= 100 {
+            short_2s += 1;
+        }
+        if dist < 21 && cost >= 100 {
+            short_20s += 1;
         }
     }
-    shortcuts
+    (short_2s, short_20s)
 }
