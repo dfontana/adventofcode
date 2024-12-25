@@ -57,8 +57,9 @@ impl TryFrom<String> for Solve {
 }
 
 impl Day for Solve {
+    // 42049478636360 ~315us
     fn p1(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
-        Ok(Box::new(into_num(&resolve(&self.states, &self.gates))))
+        Ok(Box::new(resolve(&self.states, &self.gates)))
     }
 
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
@@ -69,7 +70,7 @@ impl Day for Solve {
     }
 }
 
-fn resolve(states: &HashMap<Wire, Signal>, gates: &Vec<(Wire, Gate, Wire, Wire)>) -> Vec<bool> {
+fn resolve(states: &HashMap<Wire, Signal>, gates: &Vec<(Wire, Gate, Wire, Wire)>) -> i64 {
     let mut state = states.clone();
     let mut g_todo = VecDeque::from_iter(gates);
     while let Some(next) = g_todo.pop_front() {
@@ -93,19 +94,7 @@ fn resolve(states: &HashMap<Wire, Signal>, gates: &Vec<(Wire, Gate, Wire, Wire)>
         .iter()
         .filter(|(k, _)| k.starts_with('z'))
         .sorted_by(|a, b| a.0.cmp(b.0))
-        .map(|(_, s)| *s)
-        .collect()
-}
-
-fn into_num(states: &Vec<bool>) -> i64 {
-    states.iter().enumerate().fold(
-        0i64,
-        |acc, (idx, s)| {
-            if *s == false {
-                acc
-            } else {
-                acc | 1 << idx
-            }
-        },
-    )
+        .map(|(_, s)| if *s == true { 1 } else { 0 })
+        .enumerate()
+        .fold(0i64, |acc, (idx, s)| acc | s << idx)
 }
