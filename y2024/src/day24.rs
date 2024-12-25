@@ -62,6 +62,9 @@ impl Day for Solve {
     }
 
     fn p2(&self) -> Result<Box<dyn Display>, Box<dyn Error>> {
+        // 4 pairs of gates (8 total outputs) are swapped incorrectly
+        // No output got swapped twice; so it's quite literally 4 unique pairs.
+        // Ans is the 8 involed output gates, sorted and CSV'd
         Ok(Box::new(1))
     }
 }
