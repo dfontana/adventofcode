@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rust_util::Day;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     error::Error,
     fmt::Display,
 };
@@ -17,6 +17,7 @@ type Wire = String;
 pub struct Solve {
     states: HashMap<Wire, Signal>,
     gates: Vec<(Wire, Gate, Wire, Wire)>,
+    highest_output: String,
 }
 impl TryFrom<String> for Solve {
     type Error = Box<dyn Error>;
@@ -52,7 +53,17 @@ impl TryFrom<String> for Solve {
                 (w1.to_string(), g, w2.to_string(), w3.to_string())
             })
             .collect();
-        Ok(Solve { states, gates })
+        let highest_output = gates
+            .iter()
+            .filter(|(_, _, _, o)| o.starts_with('z'))
+            .map(|(_, _, _, o)| o)
+            .sorted_by(|a, b| a.0.cmp(b.0).reverse())
+            .first();
+        Ok(Solve {
+            states,
+            gates,
+            highest_output,
+        })
     }
 }
 
@@ -98,3 +109,32 @@ fn resolve(states: &HashMap<Wire, Signal>, gates: &Vec<(Wire, Gate, Wire, Wire)>
         .enumerate()
         .fold(0i64, |acc, (idx, s)| acc | s << idx)
 }
+
+fn find_wrong(gates: &Vec<(Wire, Gate, Wire, Wire)>) {
+    let mut wrong = HashSet::new();
+    todo!()
+}
+
+/*
+https://en.wikipedia.org/wiki/Adder_(electronics)#Ripple-carry_adder
+
+wrong = set()
+for op1, op, op2, res in operations:
+    if res[0] == "z" and op != "XOR" and res != highest_z:
+        wrong.add(res)
+    if (
+        op == "XOR"
+        and res[0] not in ["x", "y", "z"]
+        and op1[0] not in ["x", "y", "z"]
+        and op2[0] not in ["x", "y", "z"]
+    ):
+        wrong.add(res)
+    if op == "AND" and "x00" not in [op1, op2]:
+        for subop1, subop, subop2, subres in operations:
+            if (res == subop1 or res == subop2) and subop != "OR":
+                wrong.add(res)
+    if op == "XOR":
+        for subop1, subop, subop2, subres in operations:
+            if (res == subop1 or res == subop2) and subop == "OR":
+                wrong.add(res)
+*/
