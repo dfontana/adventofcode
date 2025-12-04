@@ -14,6 +14,11 @@ pub enum Dir {
   S,
   W,
   Idle,
+  // Extended grid
+  NE,
+  NW,
+  SE,
+  SW,
 }
 
 impl Dir {
@@ -24,6 +29,10 @@ impl Dir {
       Dir::S => Dir::N,
       Dir::W => Dir::E,
       Dir::Idle => Dir::Idle,
+      Dir::NE => Dir::SW,
+      Dir::NW => Dir::SE,
+      Dir::SE => Dir::NW,
+      Dir::SW => Dir::NE,
     }
   }
 }
@@ -150,6 +159,18 @@ impl<T> Grid<T> {
       Dir::E => Some(x + step).filter(|x| *x < self.x_max).map(|x| (y, x)),
       Dir::S => Some(y + step).filter(|y| *y < self.y_max).map(|y| (y, x)),
       Dir::Idle => Some((y, x)),
+      Dir::NE => Some(x + step)
+        .filter(|x| *x < self.x_max)
+        .and_then(|x| y.checked_sub(step).map(|y| (y, x))),
+      Dir::NW => x
+        .checked_sub(step)
+        .and_then(|x| y.checked_sub(step).map(|y| (y, x))),
+      Dir::SE => Some(x + step)
+        .filter(|x| *x < self.x_max)
+        .and_then(|x| Some(y + step).filter(|y| *y < self.y_max).map(|y| (y, x))),
+      Dir::SW => x
+        .checked_sub(step)
+        .and_then(|x| Some(y + step).filter(|y| *y < self.y_max).map(|y| (y, x))),
     }
   }
 
@@ -169,6 +190,7 @@ impl<T> Grid<T> {
     self.board[y][x] = val;
   }
 
+  /// Iterate through the grid in (y, x, T) pairs
   pub fn iter<'a>(&'a self) -> GridIter<'a, T> {
     GridIter {
       grid: self,
