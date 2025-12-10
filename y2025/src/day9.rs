@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use rust_util::Day;
 use std::{
     collections::{HashSet, VecDeque},
